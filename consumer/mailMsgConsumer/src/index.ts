@@ -9,6 +9,12 @@ const kafka = new Kafka({
 const consumer = kafka.consumer({ groupId: "mail-consumer-group" });
 const producer = kafka.producer();
 
+const TOPICS = {
+  INPUT: "mail-msg",
+  OUTPUT: "formatted-ticket",
+  DLQ: "mail-msg-dlq",
+};
+
 interface MailMessage {
   id: string;
   type: "email";
@@ -20,6 +26,16 @@ interface MailMessage {
   feedbackType: FeedbackType;
 }
 
+interface DeadLetterMessage {
+  originalMessage: string;
+  error: string;
+  timestamp: string;
+  topic: string;
+  partition: number;
+  offset: string;
+}
+
+// Formatter le message en ticket
 function formatMailToTicket(mailMsg: MailMessage): FormattedTicket {
   return {
     id: mailMsg.id,
@@ -32,32 +48,53 @@ function formatMailToTicket(mailMsg: MailMessage): FormattedTicket {
   };
 }
 
+// Envoyer vers la dead letter queue en cas d'erreur
+async function sendToDeadLetterQueue(
+  originalMessage: string,
+  error: Error,
+  topic: string,
+  partition: number,
+  offset: string,
+): Promise<void> {
+  const dlqMessage: DeadLetterMessage = {
+    originalMessage,
+    error: error.message,
+    timestamp: new Date().toISOString(),
+    topic,
+    partition,
+    offset,
+  };
+
+  await producer.send({
+    topic: TOPICS.DLQ,
+    messages: [
+      {
+        key: `${topic}-${partition}-${offset}`,
+        value: JSON.stringify(dlqMessage),
+      },
+    ],
+  });
+
+  console.error(`✗ Message envoyé vers DLQ: ${error.message}`);
+}
+
 async function run() {
   await consumer.connect();
   await producer.connect();
-  console.log("Mail consumer connected to Kafka");
 
-  await consumer.subscribe({ topic: "mail-msg", fromBeginning: true });
+  await consumer.subscribe({ topic: TOPICS.INPUT, fromBeginning: true });
 
   await consumer.run({
     eachMessage: async ({ topic, partition, message }) => {
       const value = message.value?.toString();
-      console.log(
-        `[${new Date().toISOString()}] [${topic}] partition=${partition} offset=${message.offset}`,
-      );
 
       if (value) {
         try {
           const mailMsg: MailMessage = JSON.parse(value);
-          console.log("Received mail message:", mailMsg);
-
-          // Formatter le message en ticket
           const formattedTicket = formatMailToTicket(mailMsg);
-          console.log("Formatted ticket:", formattedTicket);
 
-          // Pousser dans la queue formatted-ticket
           await producer.send({
-            topic: "formatted-ticket",
+            topic: TOPICS.OUTPUT,
             messages: [
               {
                 key: formattedTicket.id,
@@ -66,18 +103,21 @@ async function run() {
             ],
           });
 
-          console.log(
-            `✓ Ticket ${formattedTicket.id} pushed to formatted-ticket queue`,
-          );
+          console.log(`✓ Ticket ${formattedTicket.id} formaté et envoyé`);
         } catch (error) {
-          console.error("Error processing mail message:", error);
+          await sendToDeadLetterQueue(
+            value,
+            error as Error,
+            topic,
+            partition,
+            message.offset,
+          );
         }
       }
     },
   });
 
   process.on("SIGINT", async () => {
-    console.log("\nShutting down Mail consumer...");
     await consumer.disconnect();
     await producer.disconnect();
     process.exit(0);
