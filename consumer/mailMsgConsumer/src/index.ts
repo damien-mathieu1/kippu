@@ -73,7 +73,7 @@ async function sendToDeadLetterQueue(
     ],
   });
 
-  console.error(`✗ Message envoyé vers DLQ: ${error.message}`);
+  console.error(`✗ Message sent into DLQ: ${error.message}`);
 }
 
 async function run() {
