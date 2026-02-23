@@ -8,7 +8,8 @@
     "dev:whatsapp-consumer": "pnpm --filter @kippu/whatsapp-consumer run dev",
     "dev:mail-consumer": "pnpm --filter @kippu/mail-consumer run dev",
     "dev:producer": "pnpm --filter @kippu/producer run dev",
-    "dev": "concurrently \"pnpm run dev:whatsapp-consumer\" \"pnpm run dev:mail-consumer\" \"pnpm run dev:producer\"",
+    "dev:formatted-ticket-consumer": "pnpm --filter @kippu/formatted-ticket-consumer run dev",
+    "dev": "concurrently \"pnpm run dev:whatsapp-consumer\" \"pnpm run dev:mail-consumer\" \"pnpm run dev:producer\" \"pnpm run dev:formatted-ticket-consumer\"",
     "build": "pnpm -r run build"
   },
   "devDependencies": {
