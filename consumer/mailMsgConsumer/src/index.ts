@@ -35,7 +35,6 @@ interface DeadLetterMessage {
   offset: string;
 }
 
-// Formatter le message en ticket
 function formatMailToTicket(mailMsg: MailMessage): FormattedTicket {
   return {
     id: mailMsg.id,
@@ -48,7 +47,6 @@ function formatMailToTicket(mailMsg: MailMessage): FormattedTicket {
   };
 }
 
-// Envoyer vers la dead letter queue en cas d'erreur
 async function sendToDeadLetterQueue(
   originalMessage: string,
   error: Error,
@@ -102,8 +100,6 @@ async function run() {
               },
             ],
           });
-
-          console.log(`✓ Ticket ${formattedTicket.id} formaté et envoyé`);
         } catch (error) {
           await sendToDeadLetterQueue(
             value,
