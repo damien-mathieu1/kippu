@@ -1,0 +1,21 @@
+{
+  "name": "kippu",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:docker": "docker-compose up -d",
+    "dev:deps": "pnpm install",
+    "dev:whatsapp-consumer": "pnpm --filter @kippu/whatsapp-consumer run dev",
+    "dev:mail-consumer": "pnpm --filter @kippu/mail-consumer run dev",
+    "dev:producer": "pnpm --filter @kippu/producer run dev",
+    "dev": "concurrently \"pnpm run dev:whatsapp-consumer\" \"pnpm run dev:mail-consumer\" \"pnpm run dev:producer\"",
+    "build": "pnpm -r run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
