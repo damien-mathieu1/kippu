@@ -22,12 +22,30 @@ async function run() {
     autoCommit: false,
     eachMessage: async ({ topic, partition, message }) => {
       const value = message.value?.toString();
-      if (!value) return;
+      if (!value) {
+        await producer.send({
+          topic: DLQ_TOPIC,
+          messages: [{ value: 'empty message', headers: { error: 'empty or null value' } }],
+        });
+        await consumer.commitOffsets([
+          { topic, partition, offset: (Number(message.offset) + 1).toString() },
+        ]);
+        return;
+      }
 
       try {
         const raw = JSON.parse(value);
 
-        if (raw.type !== 'whatsapp') return;
+        if (raw.type !== 'whatsapp') {
+          await producer.send({
+            topic: DLQ_TOPIC,
+            messages: [{ value: value, headers: { error: 'invalid type: ' + raw.type } }],
+          });
+          await consumer.commitOffsets([
+            { topic, partition, offset: (Number(message.offset) + 1).toString() },
+          ]);
+          return;
+        }
 
         const ticket: FormattedTicket = {
           id: raw.id,
