@@ -5,16 +5,19 @@
   "scripts": {
     "dev:docker": "docker-compose up -d",
     "dev:deps": "pnpm install",
-    "dev:whatsapp-consumer": "pnpm --filter @kippu/whatsapp-consumer run dev",
-    "dev:mail-consumer": "pnpm --filter @kippu/mail-consumer run dev",
-    "dev:producer": "pnpm --filter @kippu/producer run dev",
-    "dev:formatted-ticket-consumer": "pnpm --filter @kippu/formatted-ticket-consumer run dev",
-    "dev:labelized-ticket-consumer": "pnpm --filter @kippu/labelized-ticket-consumer run dev",
-    "dev": "concurrently \"pnpm run dev:whatsapp-consumer\" \"pnpm run dev:mail-consumer\" \"pnpm run dev:producer\" \"pnpm run dev:formatted-ticket-consumer\" \"pnpm run dev:labelized-ticket-consumer\"",
+    "dev:producer": "dotenv -e .env -- pnpm --filter @kippu/producer run dev",
+    "dev:whatsapp-consumer": "dotenv -e .env -- pnpm --filter @kippu/whatsapp-consumer run dev",
+    "dev:mail-consumer": "dotenv -e .env -- pnpm --filter @kippu/mail-consumer run dev",
+    "dev:formatted-ticket-consumer": "dotenv -e .env -- pnpm --filter @kippu/formatted-ticket-consumer run dev",
+    "dev:labelized-ticket-consumer": "dotenv -e .env -- pnpm --filter @kippu/labelized-ticket-consumer run dev",
+    "dev:dlq-error-manager": "dotenv -e .env -- pnpm --filter @kippu/dlq-error-manager run dev",
+    "dev:all": "concurrently -n producer,whatsapp,mail,formatted,labelized,dlq \"pnpm run dev:producer\" \"pnpm run dev:whatsapp-consumer\" \"pnpm run dev:mail-consumer\" \"pnpm run dev:formatted-ticket-consumer\" \"pnpm run dev:labelized-ticket-consumer\" \"pnpm run dev:dlq-error-manager\"",
+    "dev": "pnpm run dev:all",
     "build": "pnpm -r run build"
   },
   "devDependencies": {
     "concurrently": "^8.2.0",
+    "dotenv-cli": "^8.0.0",
     "typescript": "^5.3.0"
   },
   "engines": {
