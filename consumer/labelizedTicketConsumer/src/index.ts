@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { Kafka } from "kafkajs";
-import { saveTicket, runMigrations, type LabelizedTicket, TicketLabel } from "@kippu/shared";
+import { saveTicket, type LabelizedTicket, TicketLabel } from "@kippu/shared";
 
 const kafka = new Kafka({
   clientId: "labelized-ticket-consumer",
@@ -16,10 +16,10 @@ const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL_TICKET;
 console.log("Discord webhook URL:", DISCORD_WEBHOOK_URL);
 
 const LABEL_COLORS: Record<TicketLabel, number> = {
-  [TicketLabel.URGENT]: 0xff0000,
-  [TicketLabel.HIGH]: 0xff8c00,
-  [TicketLabel.MEDIUM]: 0xffd700,
-  [TicketLabel.LOW]: 0x00c853,
+  [TicketLabel.P0]: 0xff0000,
+  [TicketLabel.P1]: 0xff8c00,
+  [TicketLabel.P2]: 0xffd700,
+  [TicketLabel.P3]: 0x00c853,
 };
 
 async function sendToDlq(
@@ -83,7 +83,6 @@ async function run() {
     throw new Error("DISCORD_WEBHOOK_URL is not set");
   }
 
-  await runMigrations();
   await consumer.connect();
   await producer.connect();
   await consumer.subscribe({ topic: TOPIC_IN, fromBeginning: true });
