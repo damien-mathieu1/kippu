@@ -6,6 +6,7 @@ import {
   type FormattedTicket,
   type LabelizedTicket,
 } from "@kippu/shared";
+import { sendTicketCreatedAlert } from "./discord";
 
 const kafka = new Kafka({
   clientId: "formatted-ticket-consumer",
@@ -107,6 +108,8 @@ async function run() {
           messages: [{ key: ticket.id, value: JSON.stringify(labelized) }],
         });
         console.log(`[OK] ✓ Ticket labeled | ID: ${ticket.id} | Label: ${labelized.label} → ${TOPIC_OUT}`);
+        
+        await sendTicketCreatedAlert(ticket, labelized.label);
       } catch (err) {
         console.error(`[ERROR] Failed to label ticket:`, err);
         console.error(`[DLQ] ⚠️ Sending ticket to DLQ | ID: ${ticket.id} | Topic: ${TOPIC_DLQ}`);
