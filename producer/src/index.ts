@@ -12,7 +12,7 @@ const TOPICS = {
   MAIL: "mail-msg",
 };
 
-const ERROR_RATE = parseFloat(process.env.ERROR_RATE || "1");
+const ERROR_RATE = parseFloat(process.env.ERROR_RATE || "0.1");
 
 const phoneNumbers = [
   "+33612345678",
