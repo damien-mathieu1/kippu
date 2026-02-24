@@ -104,6 +104,16 @@ async function saveToDb(ticket: LabelizedTicket) {
     );
 }
 
+async function updateKpi(ticket: LabelizedTicket) {
+    await pool.query(
+        `INSERT INTO ticket_kpis (feedback_type, count)
+     VALUES ($1, 1)
+     ON CONFLICT (feedback_type)
+     DO UPDATE SET count = ticket_kpis.count + 1`,
+        [ticket.feedbackType]
+    );
+}
+
 async function run() {
     await consumer.connect();
     await producer.connect();
@@ -129,6 +139,7 @@ async function run() {
 
                 await sendToDiscord(ticket);
                 await saveToDb(ticket);
+                await updateKpi(ticket);
 
                 await consumer.commitOffsets([
                     { topic, partition, offset: (Number(message.offset) + 1).toString() },
