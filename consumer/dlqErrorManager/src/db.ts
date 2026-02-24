@@ -32,7 +32,7 @@ export interface DLQError {
 export async function initDatabase(): Promise<void> {
   // Ne pas créer automatiquement le schéma si AUTO_MIGRATE=false
   if (process.env.AUTO_MIGRATE === "false") {
-    console.log("⏭ Migration automatique désactivée (AUTO_MIGRATE=false)");
+    console.log("⏭ Auto-migration disabled (AUTO_MIGRATE=false)");
     return;
   }
 
@@ -43,15 +43,9 @@ export async function initDatabase(): Promise<void> {
     const schemaPath = path.join(__dirname, "schema.sql");
     const schema = fs.readFileSync(schemaPath, "utf8");
     await client.query(schema);
-    console.log("✓ Base de données initialisée automatiquement");
-    console.log(
-      "💡 Conseil: Utilisez 'pnpm migrate' pour les migrations manuelles",
-    );
+    console.log("✓ Database initialized automatically");
   } catch (error) {
-    console.error(
-      "Erreur lors de l'initialisation de la base de données:",
-      error,
-    );
+    console.error("Error initializing database:", error);
     throw error;
   } finally {
     client.release();
@@ -92,7 +86,7 @@ export async function insertDLQError(
     const result = await pool.query(query, values);
     return result.rows[0].id;
   } catch (error) {
-    console.error("Erreur lors de l'insertion de l'erreur DLQ:", error);
+    console.error("Error inserting DLQ error:", error);
     throw error;
   }
 }
@@ -144,7 +138,7 @@ export async function getDLQErrors(filters?: {
     const result = await pool.query(query, values);
     return result.rows;
   } catch (error) {
-    console.error("Erreur lors de la récupération des erreurs DLQ:", error);
+    console.error("Error fetching DLQ errors:", error);
     throw error;
   }
 }
@@ -164,7 +158,7 @@ export async function updateDLQErrorStatus(
   try {
     await pool.query(query, [status, errorId]);
   } catch (error) {
-    console.error("Erreur lors de la mise à jour du statut:", error);
+    console.error("Error updating status:", error);
     throw error;
   }
 }

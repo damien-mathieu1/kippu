@@ -1,10 +1,6 @@
 import { Kafka } from "kafkajs";
-import {
-  initDatabase,
-  insertDLQError,
-  closeDatabase,
-  DLQError,
-} from "./db";
+import { initDatabase, insertDLQError, closeDatabase, DLQError } from "./db";
+import { sendDiscordAlert } from "./discord";
 
 const kafka = new Kafka({
   clientId: "dlq-error-manager",
@@ -13,12 +9,7 @@ const kafka = new Kafka({
 
 const consumer = kafka.consumer({ groupId: "dlq-error-manager-group" });
 
-// Liste de toutes les DLQ à surveiller
-const DLQ_TOPICS = [
-  "mail-msg-dlq",
-  "whatsapp-msg-dlq",
-  "formatted-ticket-dlq",
-];
+const DLQ_TOPICS = ["mail-msg-dlq", "whatsapp-msg-dlq", "formatted-ticket-dlq"];
 
 interface DeadLetterMessage {
   originalMessage: string;
@@ -36,10 +27,8 @@ async function processDLQMessage(
   offset: string,
 ): Promise<void> {
   try {
-    // Générer un ID unique pour cette erreur
     const errorId = `${dlqMessage.topic}-${dlqMessage.partition}-${dlqMessage.offset}`;
 
-    // Parser le message original (peut être JSON ou texte brut)
     let rawMessage: Record<string, any>;
     try {
       rawMessage = JSON.parse(dlqMessage.originalMessage);
@@ -66,31 +55,30 @@ async function processDLQMessage(
     };
 
     const id = await insertDLQError(dlqError);
-    console.log(`✓ Erreur DLQ enregistrée [ID: ${id}] depuis ${dlqTopic}`);
-  } catch (error) {
-    console.error(
-      `✗ Erreur lors du traitement du message DLQ depuis ${dlqTopic}:`,
-      error,
+    console.log(`✓ DLQ error saved [ID: ${id}] from ${dlqTopic}`);
+
+    await sendDiscordAlert(
+      dlqMessage.topic,
+      dlqMessage.error,
+      rawMessage,
+      errorId,
     );
+  } catch (error) {
+    console.error(`✗ Error processing DLQ message from ${dlqTopic}:`, error);
   }
 }
 
 async function run() {
   try {
-    // Initialiser la base de données
     await initDatabase();
-
-    // Connecter le consumer
     await consumer.connect();
-    console.log(`✓ DLQ Error Manager connecté`);
+    console.log("✓ DLQ Error Manager connected");
 
-    // S'abonner à toutes les DLQ
     for (const topic of DLQ_TOPICS) {
       await consumer.subscribe({ topic, fromBeginning: true });
-      console.log(`✓ Abonné à ${topic}`);
+      console.log(`✓ Subscribed to ${topic}`);
     }
 
-    // Traiter les messages
     await consumer.run({
       eachMessage: async ({ topic, partition, message }) => {
         const value = message.value?.toString();
@@ -105,18 +93,14 @@ async function run() {
               message.offset,
             );
           } catch (error) {
-            console.error(
-              `✗ Erreur lors du parsing du message DLQ depuis ${topic}:`,
-              error,
-            );
+            console.error(`✗ Error parsing DLQ message from ${topic}:`, error);
           }
         }
       },
     });
 
-    // Gestion de l'arrêt propre
     const shutdown = async () => {
-      console.log("\n⏸ Arrêt du DLQ Error Manager...");
+      console.log("\n⏸ Shutting down DLQ Error Manager...");
       await consumer.disconnect();
       await closeDatabase();
       process.exit(0);
@@ -125,7 +109,7 @@ async function run() {
     process.on("SIGINT", shutdown);
     process.on("SIGTERM", shutdown);
   } catch (error) {
-    console.error("✗ Erreur fatale:", error);
+    console.error("✗ Fatal error:", error);
     await closeDatabase();
     process.exit(1);
   }

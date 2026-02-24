@@ -3,7 +3,7 @@ import { FormattedTicket, FeedbackType } from "@kippu/shared";
 
 const kafka = new Kafka({
   clientId: "mail-consumer",
-  brokers: ["localhost:9092"],
+  brokers: [process.env.KAFKA_BROKERS || "localhost:9092"],
 });
 
 const consumer = kafka.consumer({ groupId: "mail-consumer-group" });
@@ -73,7 +73,7 @@ async function sendToDeadLetterQueue(
     ],
   });
 
-  console.error(`✗ Message sent into DLQ: ${error.message}`);
+  console.error(`✗ Message sent to DLQ: ${error.message}`);
 }
 
 async function run() {
