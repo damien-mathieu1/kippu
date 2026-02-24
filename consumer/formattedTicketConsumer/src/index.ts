@@ -1,11 +1,12 @@
 import "dotenv/config";
 import { Kafka } from "kafkajs";
-import { Ollama } from "ollama";
 import {
   TicketLabel,
   type FormattedTicket,
   type LabelizedTicket,
 } from "@kippu/shared";
+import { classifyPriority } from "./agents/prioritizationAgent";
+import { classifyCategory } from "./agents/categorizationAgent";
 
 const kafka = new Kafka({
   clientId: "formatted-ticket-consumer",
@@ -14,8 +15,6 @@ const kafka = new Kafka({
 
 const consumer = kafka.consumer({ groupId: "formatted-ticket-consumer-group" });
 const producer = kafka.producer();
-
-const ollama = new Ollama({ host: "http://localhost:11434" });
 
 const TOPIC_IN = "formatted-ticket";
 const TOPIC_OUT = "labelized-ticket";
@@ -30,43 +29,34 @@ const VALID_LABELS: Record<string, TicketLabel> = {
 
 function validateFormattedTicket(ticket: any): string[] {
   const errors: string[] = [];
-  
-  if (!ticket.id || ticket.id === undefined) errors.push('missing field: id');
-  if (!ticket.channel || ticket.channel === undefined) errors.push('missing field: channel');
-  if (!ticket.contact || ticket.contact === undefined) errors.push('missing field: contact');
-  if (!ticket.content || ticket.content === undefined) errors.push('missing field: content');
-  if (!ticket.feedbackType || ticket.feedbackType === undefined) errors.push('missing field: feedbackType');
-  if (!ticket.timestamp || ticket.timestamp === undefined) errors.push('missing field: timestamp');
-  
+
+  if (!ticket.id || ticket.id === undefined) errors.push("missing field: id");
+  if (!ticket.channel || ticket.channel === undefined)
+    errors.push("missing field: channel");
+  if (!ticket.contact || ticket.contact === undefined)
+    errors.push("missing field: contact");
+  if (!ticket.content || ticket.content === undefined)
+    errors.push("missing field: content");
+  if (!ticket.feedbackType || ticket.feedbackType === undefined)
+    errors.push("missing field: feedbackType");
+  if (!ticket.timestamp || ticket.timestamp === undefined)
+    errors.push("missing field: timestamp");
+
   return errors;
 }
 
 async function labelize(ticket: FormattedTicket): Promise<LabelizedTicket> {
-  const prompt = `You are a ticket priority classifier. Based on the ticket below, respond with exactly one word: urgent, high, medium, or low.
-
-Channel: ${ticket.channel}
-Type: ${ticket.feedbackType}
-Subject: ${ticket.subject ?? "N/A"}
-Content: ${ticket.content}
-
-Priority:`;
-
-  const response = await ollama.generate({
-    model: "llama3.2:1b",
-    prompt,
-    stream: false,
-  });
-
-  const raw = response.response.trim().toLowerCase();
-  const label = VALID_LABELS[raw] ?? TicketLabel.MEDIUM;
-
-  return { ...ticket, label };
+  const [label, category] = await Promise.all([
+    classifyPriority(ticket),
+    classifyCategory(ticket),
+  ]);
+  return { ...ticket, label, category };
 }
 
 async function run() {
   await consumer.connect();
   await producer.connect();
-  console.log('✓ Formatted ticket consumer connected to Kafka');
+  console.log("✓ Formatted ticket consumer connected to Kafka");
 
   await consumer.subscribe({ topic: TOPIC_IN, fromBeginning: true });
 
@@ -74,29 +64,42 @@ async function run() {
     eachMessage: async ({ topic, partition, message }) => {
       const raw = message.value?.toString();
       const offset = message.offset;
-      
+
       if (!raw) {
-        console.error(`[ERROR] Empty or null message received | Topic: ${topic} | Partition: ${partition} | Offset: ${offset}`);
+        console.error(
+          `[ERROR] Empty or null message received | Topic: ${topic} | Partition: ${partition} | Offset: ${offset}`,
+        );
         return;
       }
 
       const ticket: FormattedTicket = JSON.parse(raw);
-      console.log(`[INFO] Processing ticket | ID: ${ticket.id} | Channel: ${ticket.channel} | FeedbackType: ${ticket.feedbackType}`);
+      console.log(
+        `[INFO] Processing ticket | ID: ${ticket.id} | Channel: ${ticket.channel} | FeedbackType: ${ticket.feedbackType}`,
+      );
 
       const validationErrors = validateFormattedTicket(ticket);
       if (validationErrors.length > 0) {
-        console.error(`[ERROR] Validation failed: ${validationErrors.join(', ')}`);
-        console.error(`[DLQ] ⚠️ Sending ticket to DLQ | ID: ${ticket.id} | Topic: ${TOPIC_DLQ}`);
+        console.error(
+          `[ERROR] Validation failed: ${validationErrors.join(", ")}`,
+        );
+        console.error(
+          `[DLQ] ⚠️ Sending ticket to DLQ | ID: ${ticket.id} | Topic: ${TOPIC_DLQ}`,
+        );
         await producer.send({
           topic: TOPIC_DLQ,
           messages: [
             {
               key: ticket.id,
-              value: JSON.stringify({ ticket, error: validationErrors.join(', ') }),
+              value: JSON.stringify({
+                ticket,
+                error: validationErrors.join(", "),
+              }),
             },
           ],
         });
-        console.log(`[DLQ] ✓ Ticket sent to DLQ | ID: ${ticket.id} | Topic: ${TOPIC_DLQ}`);
+        console.log(
+          `[DLQ] ✓ Ticket sent to DLQ | ID: ${ticket.id} | Topic: ${TOPIC_DLQ}`,
+        );
         return;
       }
 
@@ -106,10 +109,14 @@ async function run() {
           topic: TOPIC_OUT,
           messages: [{ key: ticket.id, value: JSON.stringify(labelized) }],
         });
-        console.log(`[OK] ✓ Ticket labeled | ID: ${ticket.id} | Label: ${labelized.label} → ${TOPIC_OUT}`);
+        console.log(
+          `[OK] ticket ${ticket.id} → ${TOPIC_OUT} (label: ${labelized.label}, category: ${labelized.category})`,
+        );
       } catch (err) {
         console.error(`[ERROR] Failed to label ticket:`, err);
-        console.error(`[DLQ] ⚠️ Sending ticket to DLQ | ID: ${ticket.id} | Topic: ${TOPIC_DLQ}`);
+        console.error(
+          `[DLQ] ⚠️ Sending ticket to DLQ | ID: ${ticket.id} | Topic: ${TOPIC_DLQ}`,
+        );
         await producer.send({
           topic: TOPIC_DLQ,
           messages: [
@@ -119,7 +126,9 @@ async function run() {
             },
           ],
         });
-        console.log(`[DLQ] ✓ Ticket sent to DLQ | ID: ${ticket.id} | Topic: ${TOPIC_DLQ}`);
+        console.log(
+          `[DLQ] ✓ Ticket sent to DLQ | ID: ${ticket.id} | Topic: ${TOPIC_DLQ}`,
+        );
       }
     },
   });

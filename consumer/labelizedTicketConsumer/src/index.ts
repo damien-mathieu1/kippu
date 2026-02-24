@@ -1,27 +1,28 @@
+import "dotenv/config";
 import { Kafka } from "kafkajs";
 import { Pool } from "pg";
 import { TicketLabel, type LabelizedTicket } from "@kippu/shared";
 
 const kafka = new Kafka({
     clientId: "labelized-ticket-consumer",
-    brokers: ["localhost:9092"],
+    brokers: [process.env.KAFKA_BROKERS || "localhost:9092"],
 });
 
 const consumer = kafka.consumer({ groupId: "labelized-ticket-consumer-group" });
 const producer = kafka.producer();
 
 const pool = new Pool({
-    host: "localhost",
-    port: 5432,
-    user: "app",
-    password: "app",
-    database: "messages",
+    host: process.env.POSTGRES_HOST || "localhost",
+    port: parseInt(process.env.POSTGRES_PORT || "5432"),
+    user: process.env.POSTGRES_USER || "app",
+    password: process.env.POSTGRES_PASSWORD || "app",
+    database: process.env.POSTGRES_DB || "messages",
 });
 
 const TOPIC_IN = "labelized-ticket";
 const TOPIC_DLQ = "labelized-ticket-dlq";
-const DISCORD_WEBHOOK_URL =
-    "https://discord.com/api/webhooks/1475792340940751046/wKIdK8dWZolBH5TzWz2GDHvJQjfAi6_JIBWnV4UfSRQDQNExNT8pP9262xDda-aNLMe3";
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL_TICKET;
+console.log("Discord webhook URL:", DISCORD_WEBHOOK_URL);
 
 const LABEL_COLORS: Record<TicketLabel, number> = {
     [TicketLabel.URGENT]: 0xff0000,
@@ -35,7 +36,7 @@ async function sendToDlq(
     error: string,
     topic: string,
     partition: number,
-    offset: string
+    offset: string,
 ) {
     await producer.send({
         topic: TOPIC_DLQ,
@@ -66,7 +67,7 @@ async function sendToDiscord(ticket: LabelizedTicket) {
         inline: false,
     });
 
-    const res = await fetch(DISCORD_WEBHOOK_URL, {
+    const res = await fetch(DISCORD_WEBHOOK_URL as string, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -114,7 +115,21 @@ async function updateKpi(ticket: LabelizedTicket) {
     );
 }
 
+async function updateKpi(ticket: LabelizedTicket) {
+    await pool.query(
+        `INSERT INTO ticket_kpis (feedback_type, count)
+     VALUES ($1, 1)
+     ON CONFLICT (feedback_type)
+     DO UPDATE SET count = ticket_kpis.count + 1`,
+        [ticket.feedbackType]
+    );
+}
+
 async function run() {
+    if (!DISCORD_WEBHOOK_URL) {
+        throw new Error("DISCORD_WEBHOOK_URL is not set");
+    }
+
     await consumer.connect();
     await producer.connect();
     await consumer.subscribe({ topic: TOPIC_IN, fromBeginning: true });
@@ -125,7 +140,13 @@ async function run() {
             const value = message.value?.toString();
 
             if (!value) {
-                await sendToDlq("empty message", "empty or null value", topic, partition, message.offset);
+                await sendToDlq(
+                    "empty message",
+                    "empty or null value",
+                    topic,
+                    partition,
+                    message.offset,
+                );
                 return;
             }
 
@@ -133,7 +154,13 @@ async function run() {
                 const ticket: LabelizedTicket = JSON.parse(value);
 
                 if (!ticket.label || !ticket.channel || !ticket.id) {
-                    await sendToDlq(value, "invalid ticket structure", topic, partition, message.offset);
+                    await sendToDlq(
+                        value,
+                        "invalid ticket structure",
+                        topic,
+                        partition,
+                        message.offset,
+                    );
                     return;
                 }
 

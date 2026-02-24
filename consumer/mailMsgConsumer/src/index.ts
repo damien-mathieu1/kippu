@@ -38,14 +38,17 @@ interface DeadLetterMessage {
 
 function validateMailMessage(raw: any): string[] {
   const errors: string[] = [];
-  
-  if (!raw.id || raw.id === undefined) errors.push('missing field: id');
-  if (!raw.from || raw.from === undefined) errors.push('missing field: from');
-  if (!raw.subject || raw.subject === undefined) errors.push('missing field: subject');
-  if (!raw.body || raw.body === undefined) errors.push('missing field: body');
-  if (!raw.feedbackType || raw.feedbackType === undefined) errors.push('missing field: feedbackType');
-  if (!raw.timestamp || raw.timestamp === undefined) errors.push('missing field: timestamp');
-  
+
+  if (!raw.id || raw.id === undefined) errors.push("missing field: id");
+  if (!raw.from || raw.from === undefined) errors.push("missing field: from");
+  if (!raw.subject || raw.subject === undefined)
+    errors.push("missing field: subject");
+  if (!raw.body || raw.body === undefined) errors.push("missing field: body");
+  if (!raw.feedbackType || raw.feedbackType === undefined)
+    errors.push("missing field: feedbackType");
+  if (!raw.timestamp || raw.timestamp === undefined)
+    errors.push("missing field: timestamp");
+
   return errors;
 }
 
@@ -87,13 +90,15 @@ async function sendToDeadLetterQueue(
     ],
   });
 
-  console.error(`[DLQ] ⚠️ Message sent to DLQ | Topic: ${TOPICS.DLQ} | Error: ${error}`);
+  console.error(
+    `[DLQ] ⚠️ Message sent to DLQ | Topic: ${TOPICS.DLQ} | Error: ${error}`,
+  );
 }
 
 async function run() {
   await consumer.connect();
   await producer.connect();
-  console.log('✓ Mail consumer connected to Kafka');
+  console.log("✓ Mail consumer connected to Kafka");
 
   await consumer.subscribe({ topic: TOPICS.INPUT, fromBeginning: true });
 
@@ -105,21 +110,25 @@ async function run() {
       if (value) {
         try {
           const raw = JSON.parse(value);
-          console.log(`[INFO] Processing email | ID: ${raw.id} | From: ${raw.from} | Subject: ${raw.subject?.substring(0, 30)}...`);
-          
+          console.log(
+            `[INFO] Processing email | ID: ${raw.id} | From: ${raw.from} | Subject: ${raw.subject?.substring(0, 30)}...`,
+          );
+
           const validationErrors = validateMailMessage(raw);
           if (validationErrors.length > 0) {
-            console.error(`[ERROR] Validation failed: ${validationErrors.join(', ')}`);
+            console.error(
+              `[ERROR] Validation failed: ${validationErrors.join(", ")}`,
+            );
             await sendToDeadLetterQueue(
               value,
-              validationErrors.join(', '),
+              validationErrors.join(", "),
               topic,
               partition,
               offset,
             );
             return;
           }
-          
+
           const mailMsg: MailMessage = raw;
           const formattedTicket = formatMailToTicket(mailMsg);
 
@@ -132,7 +141,6 @@ async function run() {
               },
             ],
           });
-          console.log(`[OK] ✓ Ticket created | ID: ${formattedTicket.id} | Channel: ${formattedTicket.channel}`);
         } catch (error) {
           console.error(`[ERROR] Failed to process email message:`, error);
           await sendToDeadLetterQueue(
@@ -144,7 +152,9 @@ async function run() {
           );
         }
       } else {
-        console.error(`[ERROR] Empty or null message received | Topic: ${topic} | Partition: ${partition} | Offset: ${offset}`);
+        console.error(
+          `[ERROR] Empty or null message received | Topic: ${topic} | Partition: ${partition} | Offset: ${offset}`,
+        );
       }
     },
   });

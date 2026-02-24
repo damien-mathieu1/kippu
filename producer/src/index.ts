@@ -12,7 +12,7 @@ const TOPICS = {
   MAIL: "mail-msg",
 };
 
-const ERROR_RATE = parseFloat(process.env.ERROR_RATE || "1");
+const ERROR_RATE = parseFloat(process.env.ERROR_RATE || "0.1");
 
 const phoneNumbers = [
   "+33612345678",
@@ -45,7 +45,7 @@ const devices = [
 ];
 const osVersions = ["iOS 17.2", "iOS 16.5", "Android 14", "Android 13"];
 
-const bugReports = [
+const bugReportsFR = [
   "L'app crash quand je clique sur le bouton paramètres",
   "Je n'arrive pas à me connecter, ça tourne en boucle",
   "L'écran reste blanc après le splash screen",
@@ -58,7 +58,20 @@ const bugReports = [
   "Crash à l'ouverture des paramètres",
 ];
 
-const positiveFeedback = [
+const bugReportsEN = [
+  "App crashes when I click settings",
+  "Can't log in, it keeps loading",
+  "Payment doesn't work",
+  "Notifications don't show up",
+  "Screen stays white after splash screen",
+  "I lose my session every 5 minutes",
+  "App freezes when scrolling the list",
+  "Can't upload a profile picture",
+  "Chat doesn't load old messages",
+  "Crash when opening settings",
+];
+
+const positiveFeedbackFR = [
   "Super app, très intuitive !",
   "Merci pour cette mise à jour, tout fonctionne",
   "J'adore le nouveau design",
@@ -71,7 +84,20 @@ const positiveFeedback = [
   "Merci pour les nouvelles fonctionnalités",
 ];
 
-const featureRequests = [
+const positiveFeedbackEN = [
+  "Great app, very intuitive!",
+  "Love the new design",
+  "App is much faster now",
+  "Perfect, exactly what I needed",
+  "Keep up the great work!",
+  "Customer support is fast and helpful",
+  "New version is awesome!",
+  "Works perfectly on my phone",
+  "Thanks for the new features",
+  "Really smooth experience overall",
+];
+
+const featureRequestsFR = [
   "Est-ce possible d'ajouter un mode sombre ?",
   "Vous pourriez ajouter un widget pour l'accueil",
   "Un système de backup serait utile",
@@ -80,6 +106,17 @@ const featureRequests = [
   "Intégration avec Slack serait Sympa",
   "Un mode hors ligne serait le bienvenue",
   "Pouvez-vous ajouter des thèmes personnalisés ?",
+];
+
+const featureRequestsEN = [
+  "Can you add dark mode?",
+  "A home screen widget would be nice",
+  "A backup system would be useful",
+  "An offline mode would be great",
+  "Could you add custom themes?",
+  "Integration with Slack would be nice",
+  "I'd need an API to sync data",
+  "Could you add push notification settings?",
 ];
 
 function randomElement<T>(arr: T[]): T {
@@ -150,17 +187,24 @@ function generateInvalidMailMessage() {
 
 function generateWhatsAppMessage() {
   const feedbackType = generateFeedbackType();
+  const isEN = Math.random() < 0.5;
   let body: string;
 
   switch (feedbackType) {
     case "bug":
-      body = `Bug: ${randomElement(bugReports)}\n\nApp: ${randomElement(appVersions)}\nDevice: ${randomElement(devices)}`;
+      body = isEN
+        ? `${randomElement(bugReportsEN)}\n\nApp: ${randomElement(appVersions)}\nDevice: ${randomElement(devices)}`
+        : `${randomElement(bugReportsFR)}\n\nApp: ${randomElement(appVersions)}\nDevice: ${randomElement(devices)}`;
       break;
     case "positive":
-      body = `Feedback positif: ${randomElement(positiveFeedback)}`;
+      body = isEN
+        ? `${randomElement(positiveFeedbackEN)}`
+        : `${randomElement(positiveFeedbackFR)}`;
       break;
     case "feature":
-      body = `Suggestion: ${randomElement(featureRequests)}`;
+      body = isEN
+        ? `${randomElement(featureRequestsEN)}`
+        : `${randomElement(featureRequestsFR)}`;
       break;
   }
 
@@ -177,21 +221,44 @@ function generateWhatsAppMessage() {
 
 function generateMailMessage() {
   const feedbackType = generateFeedbackType();
+  const isEN = Math.random() < 0.5;
   let subject: string;
   let body: string;
+  const sender = randomElement(emails).split("@")[0];
 
   switch (feedbackType) {
     case "bug":
-      subject = `[BUG] ${randomElement(bugReports).substring(0, 40)}`;
-      body = `Bonjour,\n\nJ'ai un bug sur l'application:\n\n${randomElement(bugReports)}\n\nVersion: ${randomElement(appVersions)}\nAppareil: ${randomElement(devices)}\nOS: ${randomElement(osVersions)}\n\nPouvez-vous m'aider ?\n\nCordialement,\n${randomElement(emails).split("@")[0]}`;
+      if (isEN) {
+        const bug = randomElement(bugReportsEN);
+        subject = `${bug.substring(0, 40)}`;
+        body = `Hello,\n\nI have a bug on the app:\n\n${bug}\n\nVersion: ${randomElement(appVersions)}\nDevice: ${randomElement(devices)}\nOS: ${randomElement(osVersions)}\n\nCan you help me?\n\nBest regards,\n${sender}`;
+      } else {
+        const bug = randomElement(bugReportsFR);
+        subject = `[BUG] ${bug.substring(0, 40)}`;
+        body = `Bonjour,\n\nJ'ai un bug sur l'application:\n\n${bug}\n\nVersion: ${randomElement(appVersions)}\nAppareil: ${randomElement(devices)}\nOS: ${randomElement(osVersions)}\n\nPouvez-vous m'aider ?\n\nCordialement,\n${sender}`;
+      }
       break;
     case "positive":
-      subject = `[FEEDBACK] ${randomElement(positiveFeedback).substring(0, 40)}`;
-      body = `Bonjour,\n\nJe tenais à vous dire que ${randomElement(positiveFeedback).toLowerCase()}\n\nMerci pour votre travail !\n\nCordialement,\n${randomElement(emails).split("@")[0]}`;
+      if (isEN) {
+        const feedback = randomElement(positiveFeedbackEN);
+        subject = `${feedback.substring(0, 40)}`;
+        body = `Hello,\n\nI wanted to say that ${feedback.toLowerCase()}\n\nThanks for your work!\n\nBest regards,\n${sender}`;
+      } else {
+        const feedback = randomElement(positiveFeedbackFR);
+        subject = `${feedback.substring(0, 40)}`;
+        body = `Bonjour,\n\nJe tenais à vous dire que ${feedback.toLowerCase()}\n\nMerci pour votre travail !\n\nCordialement,\n${sender}`;
+      }
       break;
     case "feature":
-      subject = `[SUGGESTION] ${randomElement(featureRequests).substring(0, 40)}`;
-      body = `Bonjour,\n\nJ'aurais une suggestion:\n\n${randomElement(featureRequests)}\n\nCela serait très utile pour moi.\n\nMerci,\n${randomElement(emails).split("@")[0]}`;
+      if (isEN) {
+        const feat = randomElement(featureRequestsEN);
+        subject = `${feat.substring(0, 40)}`;
+        body = `Hello,\n\nI have a suggestion:\n\n${feat}\n\nThis would be very useful for me.\n\nThanks,\n${sender}`;
+      } else {
+        const feat = randomElement(featureRequestsFR);
+        subject = `${feat.substring(0, 40)}`;
+        body = `Bonjour,\n\nJ'aurais une suggestion:\n\n${feat}\n\nCela serait très utile pour moi.\n\nMerci,\n${sender}`;
+      }
       break;
   }
 
@@ -240,7 +307,7 @@ async function run() {
 
   const interval = setInterval(() => {
     produceOne().catch((err) => console.error("Error producing message:", err));
-  }, 3000);
+  }, 5000);
 
   // Send one immediately
   await produceOne();
