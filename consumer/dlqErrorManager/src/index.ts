@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Kafka } from "kafkajs";
 import { initDatabase, insertDLQError, closeDatabase, DLQError } from "./db";
 import { sendDiscordAlert } from "./discord";
@@ -9,7 +10,7 @@ const kafka = new Kafka({
 
 const consumer = kafka.consumer({ groupId: "dlq-error-manager-group" });
 
-const DLQ_TOPICS = ["mail-msg-dlq", "whatsapp-msg-dlq", "formatted-ticket-dlq"];
+const DLQ_TOPICS = ["mail-msg-dlq", "whatsapp-msg-dlq", "labelized-ticket-dlq"];
 
 interface DeadLetterMessage {
   originalMessage: string;
@@ -69,6 +70,7 @@ async function processDLQMessage(
 }
 
 async function run() {
+  console.log("VARIABLE DISCORD : ", process.env.DISCORD_WEBHOOK_URL);
   try {
     await initDatabase();
     await consumer.connect();
@@ -83,6 +85,8 @@ async function run() {
       eachMessage: async ({ topic, partition, message }) => {
         const value = message.value?.toString();
 
+        console.log(`[INFO] Received DLQ message from ${topic} | Partition: ${partition} | Offset: ${message.offset}`);
+        
         if (value) {
           try {
             const dlqMessage: DeadLetterMessage = JSON.parse(value);

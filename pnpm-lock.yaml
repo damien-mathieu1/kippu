@@ -23,6 +23,9 @@ importers:
       axios:
         specifier: ^1.6.0
         version: 1.13.5
+      dotenv:
+        specifier: ^17.3.1
+        version: 17.3.1
       kafkajs:
         specifier: ^2.2.4
         version: 2.2.4
@@ -45,6 +48,9 @@ importers:
       '@kippu/shared':
         specifier: workspace:*
         version: link:../../shared
+      dotenv:
+        specifier: ^17.3.1
+        version: 17.3.1
       kafkajs:
         specifier: ^2.2.4
         version: 2.2.4
@@ -64,6 +70,9 @@ importers:
       '@kippu/shared':
         specifier: workspace:*
         version: link:../../shared
+      dotenv:
+        specifier: ^17.3.1
+        version: 17.3.1
       kafkajs:
         specifier: ^2.2.4
         version: 2.2.4
@@ -80,6 +89,9 @@ importers:
       '@kippu/shared':
         specifier: workspace:*
         version: link:../../shared
+      dotenv:
+        specifier: ^17.3.1
+        version: 17.3.1
       kafkajs:
         specifier: ^2.2.4
         version: 2.2.4
@@ -332,6 +344,10 @@ packages:
   delayed-stream@1.0.0:
     resolution: {integrity: sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==}
     engines: {node: '>=0.4.0'}
+
+  dotenv@17.3.1:
+    resolution: {integrity: sha512-IO8C/dzEb6O3F9/twg6ZLXz164a2fhTnEWb95H23Dm4OuN+92NmEAlTrupP9VW6Jm3sO26tQlqyvyi4CsnY9GA==}
+    engines: {node: '>=12'}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -737,6 +753,8 @@ snapshots:
       '@babel/runtime': 7.28.6
 
   delayed-stream@1.0.0: {}
+
+  dotenv@17.3.1: {}
 
   dunder-proto@1.0.1:
     dependencies:

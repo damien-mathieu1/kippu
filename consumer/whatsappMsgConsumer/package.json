@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@kippu/shared": "workspace:*",
+    "dotenv": "^17.3.1",
     "kafkajs": "^2.2.4"
   },
   "devDependencies": {
