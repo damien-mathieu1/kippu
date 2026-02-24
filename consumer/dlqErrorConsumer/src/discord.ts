@@ -19,7 +19,7 @@ interface DiscordField {
   inline?: boolean;
 }
 
-const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL_ERROR;
 
 export async function sendDiscordAlert(
   sourceTopic: string,
@@ -28,7 +28,7 @@ export async function sendDiscordAlert(
   errorId: string,
 ): Promise<void> {
   if (!DISCORD_WEBHOOK_URL) {
-    console.warn("⚠️ DISCORD_WEBHOOK_URL not configured, notification skipped");
+    console.warn("⚠️ DISCORD_WEBHOOK_URL_ERROR not configured, notification skipped");
     return;
   }
 
