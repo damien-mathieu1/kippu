@@ -12,6 +12,16 @@ const producer = kafka.producer();
 const FORMATTED_TICKET_TOPIC = 'formatted-ticket';
 const DLQ_TOPIC = 'whatsapp-msg-dlq';
 
+async function sendToDlq(value: string, error: string, topic: string, partition: number, offset: string) {
+  await producer.send({
+    topic: DLQ_TOPIC,
+    messages: [{ value, headers: { error } }],
+  });
+  await consumer.commitOffsets([
+    { topic, partition, offset: (Number(offset) + 1).toString() },
+  ]);
+}
+
 async function run() {
   await consumer.connect();
   await producer.connect();
@@ -22,14 +32,9 @@ async function run() {
     autoCommit: false,
     eachMessage: async ({ topic, partition, message }) => {
       const value = message.value?.toString();
+
       if (!value) {
-        await producer.send({
-          topic: DLQ_TOPIC,
-          messages: [{ value: 'empty message', headers: { error: 'empty or null value' } }],
-        });
-        await consumer.commitOffsets([
-          { topic, partition, offset: (Number(message.offset) + 1).toString() },
-        ]);
+        await sendToDlq('empty message', 'empty or null value', topic, partition, message.offset);
         return;
       }
 
@@ -37,13 +42,7 @@ async function run() {
         const raw = JSON.parse(value);
 
         if (raw.type !== 'whatsapp') {
-          await producer.send({
-            topic: DLQ_TOPIC,
-            messages: [{ value: value, headers: { error: 'invalid type: ' + raw.type } }],
-          });
-          await consumer.commitOffsets([
-            { topic, partition, offset: (Number(message.offset) + 1).toString() },
-          ]);
+          await sendToDlq(value, 'invalid type: ' + raw.type, topic, partition, message.offset);
           return;
         }
 
@@ -65,14 +64,7 @@ async function run() {
           { topic, partition, offset: (Number(message.offset) + 1).toString() },
         ]);
       } catch (err) {
-        await producer.send({
-          topic: DLQ_TOPIC,
-          messages: [{ value: value, headers: { error: String(err) } }],
-        });
-
-        await consumer.commitOffsets([
-          { topic, partition, offset: (Number(message.offset) + 1).toString() },
-        ]);
+        await sendToDlq(value, String(err), topic, partition, message.offset);
       }
     },
   });
