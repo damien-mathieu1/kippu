@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { Kafka } from "kafkajs";
-import { saveTicket, type LabelizedTicket, TicketLabel } from "@kippu/shared";
+import { saveTicket, updateTicketKpi, type LabelizedTicket, TicketLabel } from "@kippu/shared";
 
 const kafka = new Kafka({
     clientId: "labelized-ticket-consumer",
@@ -119,6 +119,7 @@ async function run() {
 
                 await sendToDiscord(ticket);
                 await saveTicket(ticket);
+                await updateTicketKpi(ticket.feedbackType);
 
                 await consumer.commitOffsets([
                     { topic, partition, offset: (Number(message.offset) + 1).toString() },
