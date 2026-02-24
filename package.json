@@ -12,7 +12,8 @@
     "dev:labelized-ticket-consumer": "dotenv -e .env -- pnpm --filter @kippu/labelized-ticket-consumer run dev",
     "dev:dlq-error-manager": "dotenv -e .env -- pnpm --filter @kippu/dlq-error-manager run dev",
     "dev:all": "concurrently -n producer,whatsapp,mail,formatted,labelized,dlq \"pnpm run dev:producer\" \"pnpm run dev:whatsapp-consumer\" \"pnpm run dev:mail-consumer\" \"pnpm run dev:formatted-ticket-consumer\" \"pnpm run dev:labelized-ticket-consumer\" \"pnpm run dev:dlq-error-manager\"",
-    "dev": "pnpm run dev:all",
+    "dev:all:all": "pnpm run dev:all",
+    "dev": "pnpm run dev:all:all",
     "build": "pnpm -r run build"
   },
   "devDependencies": {

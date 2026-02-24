@@ -70,7 +70,6 @@ async function processDLQMessage(
 }
 
 async function run() {
-  console.log("VARIABLE DISCORD : ", process.env.DISCORD_WEBHOOK_URL);
   try {
     await initDatabase();
     await consumer.connect();
@@ -85,8 +84,10 @@ async function run() {
       eachMessage: async ({ topic, partition, message }) => {
         const value = message.value?.toString();
 
-        console.log(`[INFO] Received DLQ message from ${topic} | Partition: ${partition} | Offset: ${message.offset}`);
-        
+        console.log(
+          `[INFO] Received DLQ message from ${topic} | Partition: ${partition} | Offset: ${message.offset}`,
+        );
+
         if (value) {
           try {
             const dlqMessage: DeadLetterMessage = JSON.parse(value);

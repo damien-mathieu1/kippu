@@ -22,6 +22,7 @@ const pool = new Pool({
 const TOPIC_IN = "labelized-ticket";
 const TOPIC_DLQ = "labelized-ticket-dlq";
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL_TICKET;
+console.log("Discord webhook URL:", DISCORD_WEBHOOK_URL);
 
 const LABEL_COLORS: Record<TicketLabel, number> = {
   [TicketLabel.URGENT]: 0xff0000,
