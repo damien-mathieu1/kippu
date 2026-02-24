@@ -1,4 +1,5 @@
 import { Kafka } from "kafkajs";
+import { Pool } from "pg";
 import { TicketLabel, type LabelizedTicket } from "@kippu/shared";
 
 const kafka = new Kafka({
@@ -8,6 +9,14 @@ const kafka = new Kafka({
 
 const consumer = kafka.consumer({ groupId: "labelized-ticket-consumer-group" });
 const producer = kafka.producer();
+
+const pool = new Pool({
+    host: "localhost",
+    port: 5432,
+    user: "app",
+    password: "app",
+    database: "messages",
+});
 
 const TOPIC_IN = "labelized-ticket";
 const TOPIC_DLQ = "labelized-ticket-dlq";
@@ -77,6 +86,24 @@ async function sendToDiscord(ticket: LabelizedTicket) {
     }
 }
 
+async function saveToDb(ticket: LabelizedTicket) {
+    await pool.query(
+        `INSERT INTO tickets (id, channel, contact, subject, content, feedback_type, label, timestamp)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     ON CONFLICT (id) DO NOTHING`,
+        [
+            ticket.id,
+            ticket.channel,
+            ticket.contact,
+            ticket.subject ?? null,
+            ticket.content,
+            ticket.feedbackType,
+            ticket.label,
+            ticket.timestamp,
+        ]
+    );
+}
+
 async function run() {
     await consumer.connect();
     await producer.connect();
@@ -101,6 +128,7 @@ async function run() {
                 }
 
                 await sendToDiscord(ticket);
+                await saveToDb(ticket);
 
                 await consumer.commitOffsets([
                     { topic, partition, offset: (Number(message.offset) + 1).toString() },
@@ -114,6 +142,7 @@ async function run() {
     process.on("SIGINT", async () => {
         await consumer.disconnect();
         await producer.disconnect();
+        await pool.end();
         process.exit(0);
     });
 }

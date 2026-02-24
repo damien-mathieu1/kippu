@@ -8,7 +8,8 @@
     },
     "dependencies": {
         "@kippu/shared": "workspace:*",
-        "kafkajs": "^2.2.4"
+        "kafkajs": "^2.2.4",
+        "pg": "^8.13.0"
     },
     "devDependencies": {
         "tsx": "^4.7.0",
