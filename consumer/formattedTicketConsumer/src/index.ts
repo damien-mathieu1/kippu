@@ -1,8 +1,6 @@
+import "dotenv/config";
 import { Kafka } from "kafkajs";
-import {
-  type FormattedTicket,
-  type LabelizedTicket,
-} from "@kippu/shared";
+import { type FormattedTicket, type LabelizedTicket } from "@kippu/shared";
 import { classifyPriority } from "./agents/prioritizationAgent";
 import { classifyCategory } from "./agents/categorizationAgent";
 
@@ -29,16 +27,52 @@ async function labelize(ticket: FormattedTicket): Promise<LabelizedTicket> {
 async function run() {
   await consumer.connect();
   await producer.connect();
-  console.log("formatted-ticket-consumer connected to Kafka");
+  console.log("✓ Formatted ticket consumer connected to Kafka");
 
   await consumer.subscribe({ topic: TOPIC_IN, fromBeginning: true });
 
   await consumer.run({
-    eachMessage: async ({ message }) => {
+    eachMessage: async ({ topic, partition, message }) => {
       const raw = message.value?.toString();
-      if (!raw) return;
+      const offset = message.offset;
+
+      if (!raw) {
+        console.error(
+          `[ERROR] Empty or null message received | Topic: ${topic} | Partition: ${partition} | Offset: ${offset}`,
+        );
+        return;
+      }
 
       const ticket: FormattedTicket = JSON.parse(raw);
+      console.log(
+        `[INFO] Processing ticket | ID: ${ticket.id} | Channel: ${ticket.channel} | FeedbackType: ${ticket.feedbackType}`,
+      );
+
+      const validationErrors = validateFormattedTicket(ticket);
+      if (validationErrors.length > 0) {
+        console.error(
+          `[ERROR] Validation failed: ${validationErrors.join(", ")}`,
+        );
+        console.error(
+          `[DLQ] ⚠️ Sending ticket to DLQ | ID: ${ticket.id} | Topic: ${TOPIC_DLQ}`,
+        );
+        await producer.send({
+          topic: TOPIC_DLQ,
+          messages: [
+            {
+              key: ticket.id,
+              value: JSON.stringify({
+                ticket,
+                error: validationErrors.join(", "),
+              }),
+            },
+          ],
+        });
+        console.log(
+          `[DLQ] ✓ Ticket sent to DLQ | ID: ${ticket.id} | Topic: ${TOPIC_DLQ}`,
+        );
+        return;
+      }
 
       try {
         const labelized = await labelize(ticket);
@@ -46,8 +80,14 @@ async function run() {
           topic: TOPIC_OUT,
           messages: [{ key: ticket.id, value: JSON.stringify(labelized) }],
         });
-        console.log(`[OK] ticket ${ticket.id} → ${TOPIC_OUT} (label: ${labelized.label}, category: ${labelized.category})`);
+        console.log(
+          `[OK] ticket ${ticket.id} → ${TOPIC_OUT} (label: ${labelized.label}, category: ${labelized.category})`,
+        );
       } catch (err) {
+        console.error(`[ERROR] Failed to label ticket:`, err);
+        console.error(
+          `[DLQ] ⚠️ Sending ticket to DLQ | ID: ${ticket.id} | Topic: ${TOPIC_DLQ}`,
+        );
         await producer.send({
           topic: TOPIC_DLQ,
           messages: [
@@ -57,7 +97,9 @@ async function run() {
             },
           ],
         });
-        console.error(`[DLQ] ticket ${ticket.id} → ${TOPIC_DLQ}:`, err);
+        console.log(
+          `[DLQ] ✓ Ticket sent to DLQ | ID: ${ticket.id} | Topic: ${TOPIC_DLQ}`,
+        );
       }
     },
   });

@@ -1,9 +1,10 @@
+import "dotenv/config";
 import { Kafka } from "kafkajs";
 import { FormattedTicket, FeedbackType } from "@kippu/shared";
 
 const kafka = new Kafka({
   clientId: "mail-consumer",
-  brokers: ["localhost:9092"],
+  brokers: [process.env.KAFKA_BROKERS || "localhost:9092"],
 });
 
 const consumer = kafka.consumer({ groupId: "mail-consumer-group" });
@@ -35,6 +36,19 @@ interface DeadLetterMessage {
   offset: string;
 }
 
+function validateMailMessage(raw: any): string[] {
+  const errors: string[] = [];
+  
+  if (!raw.id || raw.id === undefined) errors.push('missing field: id');
+  if (!raw.from || raw.from === undefined) errors.push('missing field: from');
+  if (!raw.subject || raw.subject === undefined) errors.push('missing field: subject');
+  if (!raw.body || raw.body === undefined) errors.push('missing field: body');
+  if (!raw.feedbackType || raw.feedbackType === undefined) errors.push('missing field: feedbackType');
+  if (!raw.timestamp || raw.timestamp === undefined) errors.push('missing field: timestamp');
+  
+  return errors;
+}
+
 function formatMailToTicket(mailMsg: MailMessage): FormattedTicket {
   return {
     id: mailMsg.id,
@@ -49,14 +63,14 @@ function formatMailToTicket(mailMsg: MailMessage): FormattedTicket {
 
 async function sendToDeadLetterQueue(
   originalMessage: string,
-  error: Error,
+  error: string,
   topic: string,
   partition: number,
   offset: string,
 ): Promise<void> {
   const dlqMessage: DeadLetterMessage = {
     originalMessage,
-    error: error.message,
+    error: error,
     timestamp: new Date().toISOString(),
     topic,
     partition,
@@ -73,22 +87,40 @@ async function sendToDeadLetterQueue(
     ],
   });
 
-  console.error(`✗ Message sent into DLQ: ${error.message}`);
+  console.error(`[DLQ] ⚠️ Message sent to DLQ | Topic: ${TOPICS.DLQ} | Error: ${error}`);
 }
 
 async function run() {
   await consumer.connect();
   await producer.connect();
+  console.log('✓ Mail consumer connected to Kafka');
 
   await consumer.subscribe({ topic: TOPICS.INPUT, fromBeginning: true });
 
   await consumer.run({
     eachMessage: async ({ topic, partition, message }) => {
       const value = message.value?.toString();
+      const offset = message.offset;
 
       if (value) {
         try {
-          const mailMsg: MailMessage = JSON.parse(value);
+          const raw = JSON.parse(value);
+          console.log(`[INFO] Processing email | ID: ${raw.id} | From: ${raw.from} | Subject: ${raw.subject?.substring(0, 30)}...`);
+          
+          const validationErrors = validateMailMessage(raw);
+          if (validationErrors.length > 0) {
+            console.error(`[ERROR] Validation failed: ${validationErrors.join(', ')}`);
+            await sendToDeadLetterQueue(
+              value,
+              validationErrors.join(', '),
+              topic,
+              partition,
+              offset,
+            );
+            return;
+          }
+          
+          const mailMsg: MailMessage = raw;
           const formattedTicket = formatMailToTicket(mailMsg);
 
           await producer.send({
@@ -100,15 +132,19 @@ async function run() {
               },
             ],
           });
+          console.log(`[OK] ✓ Ticket created | ID: ${formattedTicket.id} | Channel: ${formattedTicket.channel}`);
         } catch (error) {
+          console.error(`[ERROR] Failed to process email message:`, error);
           await sendToDeadLetterQueue(
             value,
-            error as Error,
+            String(error),
             topic,
             partition,
-            message.offset,
+            offset,
           );
         }
+      } else {
+        console.error(`[ERROR] Empty or null message received | Topic: ${topic} | Partition: ${partition} | Offset: ${offset}`);
       }
     },
   });

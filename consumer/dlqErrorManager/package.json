@@ -1,17 +1,21 @@
 {
-  "name": "@kippu/mail-consumer",
+  "name": "@kippu/dlq-error-manager",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "tsx src/index.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "migrate": "tsx src/migrate.ts"
   },
   "dependencies": {
     "@kippu/shared": "workspace:*",
+    "axios": "^1.6.0",
     "dotenv": "^17.3.1",
-    "kafkajs": "^2.2.4"
+    "kafkajs": "^2.2.4",
+    "pg": "^8.11.3"
   },
   "devDependencies": {
+    "@types/pg": "^8.10.9",
     "tsx": "^4.7.0",
     "typescript": "^5.3.0"
   }

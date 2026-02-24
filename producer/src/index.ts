@@ -12,6 +12,8 @@ const TOPICS = {
   MAIL: "mail-msg",
 };
 
+const ERROR_RATE = parseFloat(process.env.ERROR_RATE || "0.1");
+
 const phoneNumbers = [
   "+33612345678",
   "+33723456789",
@@ -137,6 +139,52 @@ function generateFeedbackType(): "bug" | "positive" | "feature" {
   return "feature";
 }
 
+function shouldGenerateInvalid(): boolean {
+  return Math.random() < ERROR_RATE;
+}
+
+function generateInvalidWhatsAppMessage() {
+  const fieldToRemove = Math.floor(Math.random() * 5);
+  const base = generateWhatsAppMessage();
+
+  switch (fieldToRemove) {
+    case 0:
+      return { ...base, id: undefined };
+    case 1:
+      return { ...base, type: undefined };
+    case 2:
+      return { ...base, from: undefined };
+    case 3:
+      return { ...base, body: undefined };
+    case 4:
+      return { ...base, feedbackType: undefined };
+    default:
+      return { ...base, timestamp: undefined };
+  }
+}
+
+function generateInvalidMailMessage() {
+  const fieldToRemove = Math.floor(Math.random() * 6);
+  const base = generateMailMessage();
+
+  switch (fieldToRemove) {
+    case 0:
+      return { ...base, id: undefined };
+    case 1:
+      return { ...base, type: undefined };
+    case 2:
+      return { ...base, from: undefined };
+    case 3:
+      return { ...base, subject: undefined };
+    case 4:
+      return { ...base, body: undefined };
+    case 5:
+      return { ...base, feedbackType: undefined };
+    default:
+      return { ...base, timestamp: undefined };
+  }
+}
+
 function generateWhatsAppMessage() {
   const feedbackType = generateFeedbackType();
   const isEN = Math.random() < 0.5;
@@ -228,14 +276,24 @@ function generateMailMessage() {
 
 async function produceOne() {
   const isWhatsApp = Math.random() > 0.5;
-  const message = isWhatsApp
-    ? generateWhatsAppMessage()
-    : generateMailMessage();
-  const topic = isWhatsApp ? TOPICS.WHATSAPP : TOPICS.MAIL;
+  const isInvalid = shouldGenerateInvalid();
 
-  console.log(
-    `[${new Date().toISOString()}] Producing ${isWhatsApp ? "WhatsApp" : "Mail"} message to topic ${topic}`,
-  );
+  let message;
+  if (isInvalid) {
+    message = isWhatsApp
+      ? generateInvalidWhatsAppMessage()
+      : generateInvalidMailMessage();
+    console.log(
+      `[${new Date().toISOString()}] ⚠️ Producing INVALID ${isWhatsApp ? "WhatsApp" : "Mail"} message to topic ${isWhatsApp ? TOPICS.WHATSAPP : TOPICS.MAIL}`,
+    );
+  } else {
+    message = isWhatsApp ? generateWhatsAppMessage() : generateMailMessage();
+    console.log(
+      `[${new Date().toISOString()}] Producing ${isWhatsApp ? "WhatsApp" : "Mail"} message to topic ${isWhatsApp ? TOPICS.WHATSAPP : TOPICS.MAIL}`,
+    );
+  }
+
+  const topic = isWhatsApp ? TOPICS.WHATSAPP : TOPICS.MAIL;
 
   await producer.send({
     topic,
