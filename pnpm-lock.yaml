@@ -18,7 +18,7 @@ importers:
         specifier: ^5.3.0
         version: 5.9.3
 
-  consumer/dlqErrorManager:
+  consumer/dlqErrorConsumer:
     dependencies:
       '@kippu/shared':
         specifier: workspace:*
@@ -51,6 +51,9 @@ importers:
       '@kippu/shared':
         specifier: workspace:*
         version: link:../../shared
+      axios:
+        specifier: ^1.6.0
+        version: 1.13.5
       dotenv:
         specifier: ^17.3.1
         version: 17.3.1
@@ -73,6 +76,9 @@ importers:
       '@kippu/shared':
         specifier: workspace:*
         version: link:../../shared
+      dotenv:
+        specifier: ^17.3.1
+        version: 17.3.1
       kafkajs:
         specifier: ^2.2.4
         version: 2.2.4
@@ -80,6 +86,9 @@ importers:
         specifier: ^8.13.0
         version: 8.18.0
     devDependencies:
+      '@types/pg':
+        specifier: ^8.16.0
+        version: 8.16.0
       tsx:
         specifier: ^4.7.0
         version: 4.21.0
