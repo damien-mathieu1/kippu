@@ -346,6 +346,7 @@ packages:
     engines: {node: '>=18'}
     peerDependencies:
       '@langchain/core': '>=0.3.58 <0.4.0'
+
   '@types/node@20.19.33':
     resolution: {integrity: sha512-Rs1bVAIdBs5gbTIKza/tgpMuG1k3U/UMJLWecIMxNdJFDMzcM5LOiLVRYh3PilWEYDIeUDv7bpiHPLPsbydGcw==}
 
@@ -880,7 +881,6 @@ snapshots:
   '@esbuild/win32-x64@0.27.3':
     optional: true
 
-<<<<<<< HEAD
   '@langchain/core@0.3.80':
     dependencies:
       '@cfworker/json-schema': 4.1.1
@@ -906,6 +906,7 @@ snapshots:
       '@langchain/core': 0.3.80
       ollama: 0.5.18
       uuid: 10.0.0
+
   '@types/node@20.19.33':
     dependencies:
       undici-types: 6.21.0
