@@ -29,3 +29,5 @@ export interface LabelizedTicket extends FormattedTicket {
   label: TicketLabel;
   category: TicketCategory;
 }
+
+export * from "./database";
