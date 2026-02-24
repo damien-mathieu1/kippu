@@ -57,7 +57,7 @@ export async function insertDLQError(
 ): Promise<number> {
   const query = `
     INSERT INTO dlq_errors (
-      error_id, source_topic, partition, offset,
+      error_id, source_topic, partition, "offset",
       raw_message, error_message, error_stack,
       status, retry_count, error_timestamp, metadata
     )
@@ -98,16 +98,16 @@ export async function getDLQErrors(filters?: {
   offset?: number;
 }): Promise<DLQError[]> {
   let query = `
-    SELECT
-      id, error_id as "errorId", source_topic as "sourceTopic",
-      partition, offset, raw_message as "rawMessage",
-      error_message as "errorMessage", error_stack as "errorStack",
-      status, retry_count as "retryCount",
-      error_timestamp as "errorTimestamp", created_at as "createdAt",
-      updated_at as "updatedAt", resolved_at as "resolvedAt", metadata
-    FROM dlq_errors
-    WHERE 1=1
-  `;
+  SELECT
+    id, error_id as "errorId", source_topic as "sourceTopic",
+    partition, "offset", raw_message as "rawMessage",
+    error_message as "errorMessage", error_stack as "errorStack",
+    status, retry_count as "retryCount",
+    error_timestamp as "errorTimestamp", created_at as "createdAt",
+    updated_at as "updatedAt", resolved_at as "resolvedAt", metadata
+  FROM dlq_errors
+  WHERE 1=1
+`;
 
   const values: any[] = [];
   let paramIndex = 1;

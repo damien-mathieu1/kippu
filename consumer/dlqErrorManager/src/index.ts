@@ -1,6 +1,6 @@
 import { Kafka } from "kafkajs";
 import { initDatabase, insertDLQError, closeDatabase, DLQError } from "./db";
-import { sendToDiscord, sendDLQAlert } from "./discord";
+import { sendDiscordAlert } from "./discord";
 
 const kafka = new Kafka({
   clientId: "dlq-error-manager",
@@ -57,36 +57,12 @@ async function processDLQMessage(
     const id = await insertDLQError(dlqError);
     console.log(`✓ DLQ error saved [ID: ${id}] from ${dlqTopic}`);
 
-    // Detect if the raw message looks like a LabelizedTicket (has label and required ticket fields)
-    const isLabelized =
-      rawMessage &&
-      typeof rawMessage === "object" &&
-      "label" in rawMessage &&
-      "id" in rawMessage &&
-      "channel" in rawMessage &&
-      "contact" in rawMessage &&
-      "content" in rawMessage &&
-      "feedbackType" in rawMessage &&
-      "timestamp" in rawMessage;
-
-    if (isLabelized) {
-      try {
-        await sendToDiscord(rawMessage as any);
-      } catch (err) {
-        console.error("✗ Failed to send ticket alert to Discord:", err);
-      }
-    } else {
-      try {
-        await sendDLQAlert(
-          dlqMessage.topic,
-          dlqMessage.error,
-          rawMessage,
-          errorId,
-        );
-      } catch (err) {
-        console.error("✗ Failed to send DLQ alert to Discord:", err);
-      }
-    }
+    await sendDiscordAlert(
+      dlqMessage.topic,
+      dlqMessage.error,
+      rawMessage,
+      errorId,
+    );
   } catch (error) {
     console.error(`✗ Error processing DLQ message from ${dlqTopic}:`, error);
   }
