@@ -21,10 +21,10 @@ const TOPIC_OUT = "labelized-ticket";
 const TOPIC_DLQ = "labelized-ticket-dlq";
 
 const VALID_LABELS: Record<string, TicketLabel> = {
-  urgent: TicketLabel.URGENT,
-  high: TicketLabel.HIGH,
-  medium: TicketLabel.MEDIUM,
-  low: TicketLabel.LOW,
+  critical: TicketLabel.P0,
+  high: TicketLabel.P1,
+  medium: TicketLabel.P2,
+  low: TicketLabel.P3,
 };
 
 function validateFormattedTicket(ticket: any): string[] {

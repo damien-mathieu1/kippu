@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS tickets (
+  id VARCHAR(255) PRIMARY KEY,
+  channel VARCHAR(50) NOT NULL,
+  contact VARCHAR(255) NOT NULL,
+  subject TEXT,
+  content TEXT NOT NULL,
+  feedback_type VARCHAR(50) NOT NULL,
+  label VARCHAR(50) NOT NULL,
+  timestamp TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
