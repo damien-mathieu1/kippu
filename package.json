@@ -14,12 +14,13 @@
     "dev:all": "concurrently -n producer,whatsapp,mail,formatted,labelized,dlq \"pnpm run dev:producer\" \"pnpm run dev:whatsapp-consumer\" \"pnpm run dev:mail-consumer\" \"pnpm run dev:formatted-ticket-consumer\" \"pnpm run dev:labelized-ticket-consumer\" \"pnpm run dev:dlq-error-manager\"",
     "dev:all:all": "pnpm run dev:all",
     "dev": "pnpm run dev:all:all",
-
-    "build": "pnpm --filter @kippu/shared run build && pnpm -r --filter='!@kippu/shared' run build"
+    "build": "pnpm --filter @kippu/shared run build && pnpm -r --filter='!@kippu/shared' run build",
+    "migrate": "dotenv -e .env -- tsx -e \"import { runMigrations } from '@kippu/shared'; runMigrations().then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1); })\""
   },
   "devDependencies": {
     "concurrently": "^8.2.0",
     "dotenv-cli": "^8.0.0",
+    "tsx": "^4.7.0",
     "typescript": "^5.3.0"
   },
   "engines": {
