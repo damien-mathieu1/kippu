@@ -1,7 +1,6 @@
 import "dotenv/config";
 import { Kafka } from "kafkajs";
-import { Pool } from "pg";
-import { TicketLabel, type LabelizedTicket } from "@kippu/shared";
+import { saveTicket, runMigrations, type LabelizedTicket, TicketLabel } from "@kippu/shared";
 
 const kafka = new Kafka({
   clientId: "labelized-ticket-consumer",
@@ -10,14 +9,6 @@ const kafka = new Kafka({
 
 const consumer = kafka.consumer({ groupId: "labelized-ticket-consumer-group" });
 const producer = kafka.producer();
-
-const pool = new Pool({
-  host: process.env.POSTGRES_HOST || "localhost",
-  port: parseInt(process.env.POSTGRES_PORT || "5432"),
-  user: process.env.POSTGRES_USER || "app",
-  password: process.env.POSTGRES_PASSWORD || "app",
-  database: process.env.POSTGRES_DB || "messages",
-});
 
 const TOPIC_IN = "labelized-ticket";
 const TOPIC_DLQ = "labelized-ticket-dlq";
@@ -87,29 +78,12 @@ async function sendToDiscord(ticket: LabelizedTicket) {
   }
 }
 
-async function saveToDb(ticket: LabelizedTicket) {
-  await pool.query(
-    `INSERT INTO tickets (id, channel, contact, subject, content, feedback_type, label, timestamp)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-     ON CONFLICT (id) DO NOTHING`,
-    [
-      ticket.id,
-      ticket.channel,
-      ticket.contact,
-      ticket.subject ?? null,
-      ticket.content,
-      ticket.feedbackType,
-      ticket.label,
-      ticket.timestamp,
-    ],
-  );
-}
-
 async function run() {
   if (!DISCORD_WEBHOOK_URL) {
     throw new Error("DISCORD_WEBHOOK_URL is not set");
   }
 
+  await runMigrations();
   await consumer.connect();
   await producer.connect();
   await consumer.subscribe({ topic: TOPIC_IN, fromBeginning: true });
@@ -145,7 +119,7 @@ async function run() {
         }
 
         await sendToDiscord(ticket);
-        await saveToDb(ticket);
+        await saveTicket(ticket);
 
         await consumer.commitOffsets([
           { topic, partition, offset: (Number(message.offset) + 1).toString() },
@@ -159,7 +133,6 @@ async function run() {
   process.on("SIGINT", async () => {
     await consumer.disconnect();
     await producer.disconnect();
-    await pool.end();
     process.exit(0);
   });
 }
