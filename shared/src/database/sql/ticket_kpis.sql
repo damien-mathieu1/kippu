@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS ticket_kpis (
+  feedback_type VARCHAR(50) PRIMARY KEY,
+  count INTEGER DEFAULT 0
+);
