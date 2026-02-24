@@ -1,6 +1,10 @@
 import "dotenv/config";
 import { Kafka } from "kafkajs";
-import { type FormattedTicket, type LabelizedTicket } from "@kippu/shared";
+import {
+  TicketLabel,
+  type FormattedTicket,
+  type LabelizedTicket,
+} from "@kippu/shared";
 import { classifyPriority } from "./agents/prioritizationAgent";
 import { classifyCategory } from "./agents/categorizationAgent";
 
@@ -15,6 +19,31 @@ const producer = kafka.producer();
 const TOPIC_IN = "formatted-ticket";
 const TOPIC_OUT = "labelized-ticket";
 const TOPIC_DLQ = "labelized-ticket-dlq";
+
+const VALID_LABELS: Record<string, TicketLabel> = {
+  urgent: TicketLabel.URGENT,
+  high: TicketLabel.HIGH,
+  medium: TicketLabel.MEDIUM,
+  low: TicketLabel.LOW,
+};
+
+function validateFormattedTicket(ticket: any): string[] {
+  const errors: string[] = [];
+
+  if (!ticket.id || ticket.id === undefined) errors.push("missing field: id");
+  if (!ticket.channel || ticket.channel === undefined)
+    errors.push("missing field: channel");
+  if (!ticket.contact || ticket.contact === undefined)
+    errors.push("missing field: contact");
+  if (!ticket.content || ticket.content === undefined)
+    errors.push("missing field: content");
+  if (!ticket.feedbackType || ticket.feedbackType === undefined)
+    errors.push("missing field: feedbackType");
+  if (!ticket.timestamp || ticket.timestamp === undefined)
+    errors.push("missing field: timestamp");
+
+  return errors;
+}
 
 async function labelize(ticket: FormattedTicket): Promise<LabelizedTicket> {
   const [label, category] = await Promise.all([
