@@ -1,7 +1,15 @@
 import "dotenv/config";
 import { Kafka } from "kafkajs";
-import { initDatabase, insertDLQError, closeDatabase, DLQError } from "./db";
 import { sendDiscordAlert } from "./discord";
+import {
+  insertDLQError,
+  getDLQErrors,
+  updateDLQErrorStatus,
+  closeDatabase,
+  type DLQError,
+  type DLQErrorInput,
+  type DLQErrorFilters,
+} from "@kippu/shared";
 
 const kafka = new Kafka({
   clientId: "dlq-error-manager",
@@ -71,7 +79,6 @@ async function processDLQMessage(
 
 async function run() {
   try {
-    await initDatabase();
     await consumer.connect();
     console.log("✓ DLQ Error Manager connected");
 
