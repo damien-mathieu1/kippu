@@ -9,7 +9,8 @@
     "dev:mail-consumer": "pnpm --filter @kippu/mail-consumer run dev",
     "dev:producer": "pnpm --filter @kippu/producer run dev",
     "dev:formatted-ticket-consumer": "pnpm --filter @kippu/formatted-ticket-consumer run dev",
-    "dev": "concurrently \"pnpm run dev:whatsapp-consumer\" \"pnpm run dev:mail-consumer\" \"pnpm run dev:producer\" \"pnpm run dev:formatted-ticket-consumer\"",
+    "dev:labelized-ticket-consumer": "pnpm --filter @kippu/labelized-ticket-consumer run dev",
+    "dev": "concurrently \"pnpm run dev:whatsapp-consumer\" \"pnpm run dev:mail-consumer\" \"pnpm run dev:producer\" \"pnpm run dev:formatted-ticket-consumer\" \"pnpm run dev:labelized-ticket-consumer\"",
     "build": "pnpm -r run build"
   },
   "devDependencies": {
@@ -18,5 +19,6 @@
   },
   "engines": {
     "node": ">=18"
-  }
+  },
+  "packageManager": "pnpm@10.30.1+sha512.3590e550d5384caa39bd5c7c739f72270234b2f6059e13018f975c313b1eb9fefcc09714048765d4d9efe961382c312e624572c0420762bdc5d5940cdf9be73a"
 }
