@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { Kafka, Producer } from "kafkajs";
 import { v4 as uuidv4 } from "uuid";
 
