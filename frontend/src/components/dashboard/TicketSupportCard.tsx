@@ -1,15 +1,18 @@
-import { useState } from "react";
 import { Card } from "@/components/retroui/Card";
+import { Button } from "@/components/retroui/Button";
 import { TicketTable } from "./TicketTable";
-import { Pagination } from "./Pagination";
-import { mockTickets } from "@/data/mock-tickets";
+import { Link } from "react-router-dom";
+import type { Ticket } from "@/types";
 
-const PAGE_SIZE = 5;
+const DEFAULT_COUNT = 5;
 
-export function TicketSupportCard() {
-  const [page, setPage] = useState(0);
-  const totalPages = Math.ceil(mockTickets.length / PAGE_SIZE);
-  const paginatedTickets = mockTickets.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+interface TicketSupportCardProps {
+  tickets: Ticket[] | null;
+}
+
+export function TicketSupportCard({ tickets }: TicketSupportCardProps) {
+  const allTickets = tickets ?? [];
+  const visibleTickets = allTickets.slice(0, DEFAULT_COUNT);
 
   return (
     <Card className="w-full">
@@ -17,8 +20,20 @@ export function TicketSupportCard() {
         <Card.Title>Ticket Support</Card.Title>
       </Card.Header>
       <Card.Content>
-        <TicketTable tickets={paginatedTickets} />
-        <Pagination total={totalPages} current={page} onPageChange={setPage} />
+        {allTickets.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">No tickets yet</p>
+        ) : (
+          <>
+            <TicketTable tickets={visibleTickets} />
+            {allTickets.length > DEFAULT_COUNT && (
+              <div className="flex justify-center mt-4">
+                <Button size="sm" variant="outline" asChild>
+                  <Link to="/tickets">Voir plus</Link>
+                </Button>
+              </div>
+            )}
+          </>
+        )}
       </Card.Content>
     </Card>
   );

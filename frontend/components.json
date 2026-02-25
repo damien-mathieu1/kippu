@@ -19,5 +19,7 @@
     "lib": "@/lib",
     "hooks": "@/hooks"
   },
-  "registries": {}
+  "registries": {
+    "@retroui": "https://retroui.dev/r/{name}.json"
+  }
 }
