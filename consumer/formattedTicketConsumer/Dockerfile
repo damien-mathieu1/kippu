@@ -14,7 +14,7 @@ COPY consumer/formattedTicketConsumer/package.json          ./consumer/formatted
 RUN corepack enable pnpm && \
     pnpm install --frozen-lockfile
 
-# ─── Stage 2: Build shared, then the consumer ─────────────────────────────────
+# ─── Stage 2: Build shared, then the consumer, then deploy ────────────────────
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -31,23 +31,18 @@ RUN corepack enable pnpm && \
     # 1. Build @kippu/shared first (generates dist/ + copies SQL files)
     pnpm --filter @kippu/shared run build && \
     # 2. Build the consumer
-    pnpm --filter @kippu/formatted-ticket-consumer run build
+    pnpm --filter @kippu/formatted-ticket-consumer run build && \
+    # 3. Create a self-contained production deployment (resolves all deps incl. workspace:*)
+    pnpm deploy --legacy --filter @kippu/formatted-ticket-consumer --prod /deploy
 
 # ─── Stage 3: Lean production image ───────────────────────────────────────────
 FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Copy compiled output from consumer
-COPY --from=builder /app/consumer/formattedTicketConsumer/dist ./dist
-COPY --from=builder /app/consumer/formattedTicketConsumer/package.json ./package.json
-
-# Copy compiled @kippu/shared (required at runtime)
-COPY --from=builder /app/shared/dist ./shared/dist
-COPY --from=builder /app/shared/package.json ./shared/package.json
-
-# Copy production dependencies
-COPY --from=builder /app/node_modules ./node_modules
+# pnpm deploy produces a fully self-contained directory:
+# dist/, package.json, node_modules/ (with @kippu/shared inlined)
+COPY --from=builder /deploy .
 
 ENV NODE_ENV=production
 
