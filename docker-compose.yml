@@ -1,6 +1,8 @@
 version: "3.9"
 
 services:
+  # ── Infrastructure ────────────────────────────────────────────────────────────
+
   kafka:
     build:
       context: ./kafka
@@ -140,9 +142,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app
-      POSTGRES_DB: messages
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-messages}
     volumes:
       - pg-data:/var/lib/postgresql/data
 
@@ -199,7 +201,7 @@ services:
     depends_on:
       - ollama
     environment:
-      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://ollama:11434}
     entrypoint: >
       bash -c "
         echo 'Waiting for Ollama...' &&
@@ -207,6 +209,122 @@ services:
         ollama pull llama3.2:1b &&
         echo 'Model pulled'
       "
+
+  # ── Application services (profile: app) ──────────────────────────────────────
+
+  producer:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: producer/Dockerfile
+    container_name: kippu-producer
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      KAFKA_BROKERS: kafka:29092
+      ERROR_RATE: ${ERROR_RATE:-0.1}
+    depends_on:
+      - kafka
+      - init-topics
+
+  whatsapp-consumer:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: consumer/whatsappMsgConsumer/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      KAFKA_BROKERS: kafka:29092
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-messages}
+      AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
+    depends_on:
+      - kafka
+      - postgres
+      - init-topics
+
+  mail-consumer:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: consumer/mailMsgConsumer/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      KAFKA_BROKERS: kafka:29092
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-messages}
+      AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
+    depends_on:
+      - kafka
+      - postgres
+      - init-topics
+
+  formatted-ticket-consumer:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: consumer/formattedTicketConsumer/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      KAFKA_BROKERS: kafka:29092
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:1b}
+    depends_on:
+      - kafka
+      - ollama
+      - init-ollama
+      - init-topics
+
+  labelized-ticket-consumer:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: consumer/labelizedTicketConsumer/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      KAFKA_BROKERS: kafka:29092
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-messages}
+      AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
+      DISCORD_WEBHOOK_URL_TICKET: ${DISCORD_WEBHOOK_URL_TICKET}
+    depends_on:
+      - kafka
+      - postgres
+      - init-topics
+
+  dlq-error-manager:
+    profiles: [app]
+    build:
+      context: .
+      dockerfile: consumer/dlqErrorConsumer/Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      KAFKA_BROKERS: kafka:29092
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-app}
+      POSTGRES_DB: ${POSTGRES_DB:-messages}
+      AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
+      DISCORD_WEBHOOK_URL_ERROR: ${DISCORD_WEBHOOK_URL_ERROR}
+    depends_on:
+      - kafka
+      - postgres
+      - init-topics
 
 volumes:
   kafka-data:
