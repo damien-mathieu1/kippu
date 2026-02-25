@@ -267,6 +267,9 @@ importers:
 
   producer:
     dependencies:
+      dotenv:
+        specifier: ^17.3.1
+        version: 17.3.1
       kafkajs:
         specifier: ^2.2.4
         version: 2.2.4
@@ -274,6 +277,9 @@ importers:
         specifier: ^9.0.0
         version: 9.0.1
     devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.33
       '@types/uuid':
         specifier: ^9.0.0
         version: 9.0.8

@@ -4,7 +4,7 @@ import { saveTicket, updateTicketKpi, findSimilarTicket, incrementTicketOccurren
 
 const kafka = new Kafka({
     clientId: "labelized-ticket-consumer",
-    brokers: [process.env.KAFKA_BROKERS || "localhost:9092"],
+    brokers: (process.env.KAFKA_BROKERS || "localhost:9092").split(","),
 });
 
 const consumer = kafka.consumer({ groupId: "labelized-ticket-consumer-group" });
@@ -22,6 +22,15 @@ const LABEL_COLORS: Record<TicketLabel, number> = {
     [TicketLabel.P3]: 0x00c853,
 };
 
+interface DeadLetterMessage {
+    originalMessage: string;
+    error: string;
+    timestamp: string;
+    topic: string;
+    partition: number;
+    offset: string;
+}
+
 async function sendToDlq(
     value: string,
     error: string,
@@ -29,14 +38,18 @@ async function sendToDlq(
     partition: number,
     offset: string,
 ) {
-    const dlqMessage = {
+    const dlqMessage: DeadLetterMessage = {
         originalMessage: value,
-        error: error,
+        error,
         timestamp: new Date().toISOString(),
-        topic: topic,
-        partition: partition,
-        offset: offset
+        topic,
+        partition,
+        offset,
     };
+
+    console.error(
+        `[DLQ] ⚠️ Message sent to DLQ | Topic: ${topic} | Partition: ${partition} | Offset: ${offset} | Error: ${error}`,
+    );
     await producer.send({
         topic: TOPIC_DLQ,
         messages: [{ value: JSON.stringify(dlqMessage) }],
@@ -44,7 +57,9 @@ async function sendToDlq(
     await consumer.commitOffsets([
         { topic, partition, offset: (Number(offset) + 1).toString() },
     ]);
+    console.log(`[DLQ] ✓ Message committed to DLQ topic: ${TOPIC_DLQ}`);
 }
+
 
 async function sendToDiscord(ticket: LabelizedTicket) {
     const fields = [
