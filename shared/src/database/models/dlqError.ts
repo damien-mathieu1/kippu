@@ -38,3 +38,8 @@ export interface DLQErrorFilters {
   limit?: number;
   offset?: number;
 }
+
+export interface DLQKpi {
+  sourceTopic: string;
+  count: number;
+}
