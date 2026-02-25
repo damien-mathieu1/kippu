@@ -106,9 +106,12 @@ services:
   init-topics:
     image: apache/kafka:3.7.0
     depends_on:
-      - kafka
-      - kafka2
-      - init-garage
+      kafka:
+        condition: service_started
+      kafka2:
+        condition: service_started
+      init-garage:
+        condition: service_completed_successfully
     entrypoint: >
       bash -c "
         echo 'Waiting for Kafka...' &&
@@ -224,8 +227,10 @@ services:
       KAFKA_BROKERS: kafka:29092
       ERROR_RATE: ${ERROR_RATE:-0.1}
     depends_on:
-      - kafka
-      - init-topics
+      kafka:
+        condition: service_started
+      init-topics:
+        condition: service_completed_successfully
 
   whatsapp-consumer:
     profiles: [app]
@@ -243,9 +248,12 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-messages}
       AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
     depends_on:
-      - kafka
-      - postgres
-      - init-topics
+      kafka:
+        condition: service_started
+      postgres:
+        condition: service_started
+      init-topics:
+        condition: service_completed_successfully
 
   mail-consumer:
     profiles: [app]
@@ -263,9 +271,12 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-messages}
       AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
     depends_on:
-      - kafka
-      - postgres
-      - init-topics
+      kafka:
+        condition: service_started
+      postgres:
+        condition: service_started
+      init-topics:
+        condition: service_completed_successfully
 
   formatted-ticket-consumer:
     profiles: [app]
@@ -279,10 +290,14 @@ services:
       OLLAMA_HOST: ${OLLAMA_HOST:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:1b}
     depends_on:
-      - kafka
-      - ollama
-      - init-ollama
-      - init-topics
+      kafka:
+        condition: service_started
+      ollama:
+        condition: service_started
+      init-ollama:
+        condition: service_started
+      init-topics:
+        condition: service_completed_successfully
 
   labelized-ticket-consumer:
     profiles: [app]
@@ -301,9 +316,12 @@ services:
       AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
       DISCORD_WEBHOOK_URL_TICKET: ${DISCORD_WEBHOOK_URL_TICKET}
     depends_on:
-      - kafka
-      - postgres
-      - init-topics
+      kafka:
+        condition: service_started
+      postgres:
+        condition: service_started
+      init-topics:
+        condition: service_completed_successfully
 
   dlq-error-manager:
     profiles: [app]
@@ -322,9 +340,12 @@ services:
       AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
       DISCORD_WEBHOOK_URL_ERROR: ${DISCORD_WEBHOOK_URL_ERROR}
     depends_on:
-      - kafka
-      - postgres
-      - init-topics
+      kafka:
+        condition: service_started
+      postgres:
+        condition: service_started
+      init-topics:
+        condition: service_completed_successfully
 
 volumes:
   kafka-data:
