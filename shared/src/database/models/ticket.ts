@@ -2,6 +2,7 @@ export { TicketLabel, type FeedbackType, type TicketChannel, type FormattedTicke
 
 export interface Ticket {
   id: string;
+  occurrencesCount?: number;
   channel: string;
   contact: string;
   subject?: string;
@@ -14,6 +15,7 @@ export interface Ticket {
 
 export interface TicketInput {
   id: string;
+  occurrencesCount?: number;
   channel: string;
   contact: string;
   subject?: string;
