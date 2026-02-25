@@ -53,6 +53,40 @@ async function labelize(ticket: FormattedTicket): Promise<LabelizedTicket> {
   return { ...ticket, label, category };
 }
 
+interface DeadLetterMessage {
+  originalMessage: string;
+  error: string;
+  timestamp: string;
+  topic: string;
+  partition: number;
+  offset: string;
+}
+
+async function sendToDlq(
+  value: string,
+  error: string,
+  topic: string,
+  partition: number,
+  offset: string,
+) {
+  const dlqMessage: DeadLetterMessage = {
+    originalMessage: value,
+    error,
+    timestamp: new Date().toISOString(),
+    topic,
+    partition,
+    offset,
+  };
+  console.error(
+    `[DLQ] ⚠️ Message sent to DLQ | Topic: ${topic} | Partition: ${partition} | Offset: ${offset} | Error: ${error}`,
+  );
+  await producer.send({
+    topic: TOPIC_DLQ,
+    messages: [{ value: JSON.stringify(dlqMessage) }],
+  });
+  console.log(`[DLQ] ✓ Message committed to DLQ topic: ${TOPIC_DLQ}`);
+}
+
 async function run() {
   await consumer.connect();
   await producer.connect();
@@ -82,24 +116,7 @@ async function run() {
         console.error(
           `[ERROR] Validation failed: ${validationErrors.join(", ")}`,
         );
-        console.error(
-          `[DLQ] ⚠️ Sending ticket to DLQ | ID: ${ticket.id} | Topic: ${TOPIC_DLQ}`,
-        );
-        await producer.send({
-          topic: TOPIC_DLQ,
-          messages: [
-            {
-              key: ticket.id,
-              value: JSON.stringify({
-                ticket,
-                error: validationErrors.join(", "),
-              }),
-            },
-          ],
-        });
-        console.log(
-          `[DLQ] ✓ Ticket sent to DLQ | ID: ${ticket.id} | Topic: ${TOPIC_DLQ}`,
-        );
+        await sendToDlq(raw, validationErrors.join(", "), topic, partition, offset);
         return;
       }
 
@@ -114,21 +131,7 @@ async function run() {
         );
       } catch (err) {
         console.error(`[ERROR] Failed to label ticket:`, err);
-        console.error(
-          `[DLQ] ⚠️ Sending ticket to DLQ | ID: ${ticket.id} | Topic: ${TOPIC_DLQ}`,
-        );
-        await producer.send({
-          topic: TOPIC_DLQ,
-          messages: [
-            {
-              key: ticket.id,
-              value: JSON.stringify({ ticket, error: String(err) }),
-            },
-          ],
-        });
-        console.log(
-          `[DLQ] ✓ Ticket sent to DLQ | ID: ${ticket.id} | Topic: ${TOPIC_DLQ}`,
-        );
+        await sendToDlq(raw, String(err), topic, partition, offset);
       }
     },
   });

@@ -22,6 +22,15 @@ const LABEL_COLORS: Record<TicketLabel, number> = {
     [TicketLabel.P3]: 0x00c853,
 };
 
+interface DeadLetterMessage {
+    originalMessage: string;
+    error: string;
+    timestamp: string;
+    topic: string;
+    partition: number;
+    offset: string;
+}
+
 async function sendToDlq(
     value: string,
     error: string,
@@ -29,14 +38,28 @@ async function sendToDlq(
     partition: number,
     offset: string,
 ) {
+    const dlqMessage: DeadLetterMessage = {
+        originalMessage: value,
+        error,
+        timestamp: new Date().toISOString(),
+        topic,
+        partition,
+        offset,
+    };
+
+    console.error(
+        `[DLQ] ⚠️ Message sent to DLQ | Topic: ${topic} | Partition: ${partition} | Offset: ${offset} | Error: ${error}`,
+    );
     await producer.send({
         topic: TOPIC_DLQ,
-        messages: [{ value, headers: { error } }],
+        messages: [{ value: JSON.stringify(dlqMessage) }],
     });
     await consumer.commitOffsets([
         { topic, partition, offset: (Number(offset) + 1).toString() },
     ]);
+    console.log(`[DLQ] ✓ Message committed to DLQ topic: ${TOPIC_DLQ}`);
 }
+
 
 async function sendToDiscord(ticket: LabelizedTicket) {
     const fields = [
