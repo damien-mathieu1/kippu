@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { Kafka } from "kafkajs";
-import { saveTicket, updateTicketKpi, type LabelizedTicket, TicketLabel } from "@kippu/shared";
+import { saveTicket, updateTicketKpi, findSimilarTicket, incrementTicketOccurrences, type LabelizedTicket, TicketLabel } from "@kippu/shared";
 
 const kafka = new Kafka({
     clientId: "labelized-ticket-consumer",
@@ -117,8 +117,15 @@ async function run() {
                     return;
                 }
 
-                await sendToDiscord(ticket);
-                await saveTicket(ticket);
+                const similarTicket = await findSimilarTicket(ticket.content, 0.75);
+                if (similarTicket) {
+                    console.log(`[Grouping] Ticket ${ticket.id} is similar to ${similarTicket.id}`);
+                    await incrementTicketOccurrences(similarTicket.id);
+                } else {
+                    await sendToDiscord(ticket);
+                    await saveTicket(ticket);
+                }
+
                 await updateTicketKpi(ticket.feedbackType);
 
                 await consumer.commitOffsets([
