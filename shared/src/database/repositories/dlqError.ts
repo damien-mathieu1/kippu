@@ -1,5 +1,5 @@
 import { getPool } from "../database";
-import type { DLQError, DLQErrorInput, DLQErrorFilters, DLQErrorStatus } from "../models";
+import type { DLQError, DLQErrorInput, DLQErrorFilters, DLQErrorStatus, DLQKpi, TimeSeriesKpi } from "../models";
 
 export async function insertDLQError(error: DLQErrorInput): Promise<number> {
   const pool = getPool();
@@ -106,4 +106,32 @@ export async function getDLQErrorById(errorId: string): Promise<DLQError | null>
     [errorId],
   );
   return result.rows[0] || null;
+}
+
+export async function getDLQKpis(): Promise<DLQKpi[]> {
+  const pool = getPool();
+  const result = await pool.query(
+    `SELECT source_topic as "sourceTopic", count(*) as count 
+     FROM dlq_errors 
+     GROUP BY source_topic 
+     ORDER BY count DESC`
+  );
+  return result.rows.map(row => ({
+    sourceTopic: row.sourceTopic,
+    count: parseInt(row.count, 10)
+  }));
+}
+
+export async function getDLQErrorsOverTime(): Promise<TimeSeriesKpi[]> {
+  const pool = getPool();
+  const result = await pool.query(
+    `SELECT date_bin('5 seconds', created_at, TIMESTAMP '2020-01-01') as date, COUNT(*) as count 
+     FROM dlq_errors 
+     GROUP BY date 
+     ORDER BY date ASC`
+  );
+  return result.rows.map(row => ({
+    date: new Date(row.date).toISOString(),
+    count: parseInt(row.count, 10)
+  }));
 }
