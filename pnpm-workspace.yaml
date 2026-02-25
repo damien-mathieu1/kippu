@@ -3,3 +3,4 @@ packages:
   - "consumer/*"
   - "shared"
   - "backend"
+  - "frontend"
