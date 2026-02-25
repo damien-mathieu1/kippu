@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { Kafka } from "kafkajs";
-import { saveTicket, updateTicketKpi, type LabelizedTicket, TicketLabel } from "@kippu/shared";
+import { saveTicket, updateTicketKpi, findSimilarTicket, incrementTicketOccurrences, type LabelizedTicket, TicketLabel } from "@kippu/shared";
 
 const kafka = new Kafka({
     clientId: "labelized-ticket-consumer",
@@ -29,9 +29,17 @@ async function sendToDlq(
     partition: number,
     offset: string,
 ) {
+    const dlqMessage = {
+        originalMessage: value,
+        error: error,
+        timestamp: new Date().toISOString(),
+        topic: topic,
+        partition: partition,
+        offset: offset
+    };
     await producer.send({
         topic: TOPIC_DLQ,
-        messages: [{ value, headers: { error } }],
+        messages: [{ value: JSON.stringify(dlqMessage) }],
     });
     await consumer.commitOffsets([
         { topic, partition, offset: (Number(offset) + 1).toString() },
@@ -74,7 +82,7 @@ async function sendToDiscord(ticket: LabelizedTicket) {
     });
 
     if (!res.ok) {
-        throw new Error(`Discord ${res.status} ${res.statusText}`);
+        console.error(`Discord ${res.status} ${res.statusText}`);
     }
 }
 
@@ -117,8 +125,19 @@ async function run() {
                     return;
                 }
 
-                await sendToDiscord(ticket);
-                await saveTicket(ticket);
+                const similarTicket = await findSimilarTicket(ticket.content, 0.75);
+                if (similarTicket) {
+                    console.log(`[Grouping] Ticket ${ticket.id} is similar to ${similarTicket.id}`);
+                    await incrementTicketOccurrences(similarTicket.id);
+                } else {
+                    await saveTicket(ticket);
+                    try {
+                        await sendToDiscord(ticket);
+                    } catch (err) {
+                        console.error("Failed to send to Discord:", err);
+                    }
+                }
+
                 await updateTicketKpi(ticket.feedbackType);
 
                 await consumer.commitOffsets([

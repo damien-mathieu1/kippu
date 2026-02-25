@@ -1,6 +1,9 @@
 import { useTickets, useKpis } from "@/api/tickets.api";
 import { KpiCard } from "./KpiCard";
 import { TicketSupportCard } from "./TicketSupportCard";
+import { TicketTimeSeriesChart } from "./TicketTimeSeriesChart";
+import { DlqTimeSeriesChart } from "./DlqTimeSeriesChart";
+import { DlqKpiCard } from "./DlqKpiCard";
 
 const POLL_INTERVAL = 10_000;
 
@@ -10,8 +13,8 @@ export function Dashboard() {
 
   const lastUpdated =
     tickets.dataUpdatedAt ? new Date(tickets.dataUpdatedAt)
-    : kpis.dataUpdatedAt ? new Date(kpis.dataUpdatedAt)
-    : null;
+      : kpis.dataUpdatedAt ? new Date(kpis.dataUpdatedAt)
+        : null;
 
   return (
     <div className="p-6">
@@ -34,6 +37,14 @@ export function Dashboard() {
       </div>
       <div className="flex flex-col gap-6">
         <KpiCard kpis={kpis.data ?? null} />
+
+        <TicketTimeSeriesChart />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <DlqKpiCard />
+          <DlqTimeSeriesChart />
+        </div>
+
         <TicketSupportCard tickets={tickets.data ?? null} />
       </div>
     </div>
