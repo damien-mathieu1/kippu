@@ -1,9 +1,10 @@
+import "dotenv/config";
 import { Kafka, Producer } from "kafkajs";
 import { v4 as uuidv4 } from "uuid";
 
 const kafka = new Kafka({
   clientId: "producer",
-  brokers: ["localhost:9092"],
+  brokers: (process.env.KAFKA_BROKERS || "localhost:9092").split(","),
 });
 
 const producer = kafka.producer();
