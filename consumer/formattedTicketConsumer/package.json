@@ -2,6 +2,9 @@
   "name": "@kippu/formatted-ticket-consumer",
   "version": "0.1.0",
   "private": true,
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "tsx src/index.ts",
     "build": "tsc"
