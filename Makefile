@@ -21,9 +21,9 @@ build-producer:
 build-consumers:
 	docker build -f consumer/whatsappMsgConsumer/Dockerfile    -t kippu/whatsapp-consumer:latest .
 	docker build -f consumer/mailMsgConsumer/Dockerfile        -t kippu/mail-consumer:latest .
+	docker build -f consumer/dlqErrorConsumer/Dockerfile       -t kippu/dlq-error-manager:latest .
 	docker build -f consumer/formattedTicketConsumer/Dockerfile -t kippu/formatted-ticket-consumer:latest .
 	docker build -f consumer/labelizedTicketConsumer/Dockerfile -t kippu/labelized-ticket-consumer:latest .
-	docker build -f consumer/dlqErrorConsumer/Dockerfile       -t kippu/dlq-error-manager:latest .
 
 # ── Run ───────────────────────────────────────────────────────────────────────
 
