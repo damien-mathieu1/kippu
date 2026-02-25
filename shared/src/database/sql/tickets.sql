@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
 CREATE TABLE IF NOT EXISTS tickets (
   id VARCHAR(255) PRIMARY KEY,
   channel VARCHAR(50) NOT NULL,
@@ -7,5 +9,6 @@ CREATE TABLE IF NOT EXISTS tickets (
   feedback_type VARCHAR(50) NOT NULL,
   label VARCHAR(50) NOT NULL,
   timestamp TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  occurrences_count INTEGER DEFAULT 1
 );
