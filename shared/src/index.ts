@@ -17,6 +17,7 @@ export enum TicketCategory {
 
 export interface FormattedTicket {
   id: string;
+  occurrencesCount?: number;
   channel: TicketChannel;
   contact: string;
   subject?: string;
