@@ -39,3 +39,4 @@ See [docs/getting-started.md](docs/getting-started.md) for detailed instructions
 - [Architecture](docs/architecture.md) -- pipeline, topics, services, DLQ system
 - [Infrastructure](docs/infrastructure.md) -- Docker services, Kafka tiered storage, Garage S3
 - [Getting started](docs/getting-started.md) -- prerequisites, launch commands, ports
+- [UI and visualizations](docs/ui.md) -- screenshots of the dashboard, Kafka UI, Garage
