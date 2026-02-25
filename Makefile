@@ -2,7 +2,7 @@
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 COMPOSE        = docker compose
-COMPOSE_ALL    = $(COMPOSE) -f docker-compose.yml -f docker-compose.override.yml
+COMPOSE_APP    = $(COMPOSE) --profile app
 
 ## help: Show this help message
 help:
@@ -33,18 +33,18 @@ up-infra:
 
 ## up-all: Start infra + all application services
 up-all:
-	$(COMPOSE_ALL) up -d
+	$(COMPOSE_APP) up -d
 
 ## down: Stop and remove all containers
 down:
-	$(COMPOSE_ALL) down
+	$(COMPOSE_APP) down
 
 ## logs: Follow logs of all app services
 logs:
-	$(COMPOSE_ALL) logs -f producer whatsapp-consumer mail-consumer formatted-ticket-consumer labelized-ticket-consumer dlq-error-manager
+	$(COMPOSE_APP) logs -f producer whatsapp-consumer mail-consumer formatted-ticket-consumer labelized-ticket-consumer dlq-error-manager
 
 # ── Scaling ───────────────────────────────────────────────────────────────────
 
 ## scale-whatsapp N=3: Scale whatsapp-consumer to N replicas (default: 3)
 scale-whatsapp:
-	$(COMPOSE_ALL) up -d --scale whatsapp-consumer=$(or $(N),3)
+	$(COMPOSE_APP) up -d --scale whatsapp-consumer=$(or $(N),3)
