@@ -100,7 +100,7 @@ services:
   # ── Application services (profile: app) ──────────────────────────────────────
 
   producer:
-    profiles: [ app ]
+    profiles: [app]
     build:
       context: .
       dockerfile: producer/Dockerfile
@@ -115,7 +115,7 @@ services:
       - init-topics
 
   whatsapp-consumer:
-    profiles: [ app ]
+    profiles: [app]
     build:
       context: .
       dockerfile: consumer/whatsappMsgConsumer/Dockerfile
@@ -135,7 +135,7 @@ services:
       - init-topics
 
   mail-consumer:
-    profiles: [ app ]
+    profiles: [app]
     build:
       context: .
       dockerfile: consumer/mailMsgConsumer/Dockerfile
@@ -155,7 +155,7 @@ services:
       - init-topics
 
   formatted-ticket-consumer:
-    profiles: [ app ]
+    profiles: [app]
     build:
       context: .
       dockerfile: consumer/formattedTicketConsumer/Dockerfile
@@ -172,7 +172,7 @@ services:
       - init-topics
 
   labelized-ticket-consumer:
-    profiles: [ app ]
+    profiles: [app]
     build:
       context: .
       dockerfile: consumer/labelizedTicketConsumer/Dockerfile
@@ -193,7 +193,7 @@ services:
       - init-topics
 
   dlq-error-manager:
-    profiles: [ app ]
+    profiles: [app]
     build:
       context: .
       dockerfile: consumer/dlqErrorConsumer/Dockerfile
