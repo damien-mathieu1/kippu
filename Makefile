@@ -33,7 +33,7 @@ up-infra:
 
 ## up-all: Start infra + all application services
 up-all:
-	$(COMPOSE_APP) up -d
+	$(COMPOSE_APP) up -d --build
 
 ## down: Stop and remove all containers
 down:
