@@ -4,41 +4,126 @@ services:
   # ── Infrastructure ────────────────────────────────────────────────────────────
 
   kafka:
-    image: apache/kafka:3.7.0
+    build:
+      context: ./kafka
+      dockerfile: Dockerfile
     container_name: kafka
     ports:
       - "9092:9092"
+    depends_on:
+      - garage
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093,2@kafka2:9093
       KAFKA_LISTENERS: PLAINTEXT://:29092,CONTROLLER://:9093,PLAINTEXT_HOST://:9092
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_LOG_DIRS: /var/lib/kafka/data
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
       CLUSTER_ID: 5L6g3nShT-eMCtK--X86sw
+      # Tiered Storage
+      KAFKA_REMOTE_LOG_STORAGE_SYSTEM_ENABLE: "true"
+      KAFKA_REMOTE_LOG_MANAGER_TASK_INTERVAL_MS: "5000"
+      KAFKA_REMOTE_LOG_METADATA_MANAGER_CLASS_NAME: "org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager"
+      KAFKA_REMOTE_LOG_METADATA_MANAGER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR: "2"
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH: "/opt/kafka/tiered-storage/core/*:/opt/kafka/tiered-storage/s3/*"
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME: "io.aiven.kafka.tieredstorage.RemoteStorageManager"
+      # S3 backend (Garage)
+      KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS: "io.aiven.kafka.tieredstorage.storage.s3.S3Storage"
+      KAFKA_RSM_CONFIG_STORAGE_S3_ENDPOINT_URL: "http://garage:3902"
+      KAFKA_RSM_CONFIG_STORAGE_S3_BUCKET_NAME: "kafka-tiered-storage"
+      KAFKA_RSM_CONFIG_STORAGE_S3_REGION: "garage"
+      KAFKA_RSM_CONFIG_STORAGE_S3_PATH_STYLE_ACCESS_ENABLED: "true"
+      KAFKA_RSM_CONFIG_STORAGE_AWS_CERTIFICATE_CHECK_ENABLED: "false"
+      # Chunking & cache
+      KAFKA_RSM_CONFIG_CHUNK_SIZE: "4194304"
+      KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_CLASS: "io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache"
+      KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_PATH: "/var/lib/kafka/tiered-storage-cache"
+      KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_SIZE: "1073741824"
+      KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_PREFETCH_MAX_SIZE: "16777216"
+      KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_RETENTION_MS: "600000"
+      KAFKA_RSM_CONFIG_CUSTOM_METADATA_FIELDS_INCLUDE: "REMOTE_SIZE"
+      KAFKA_RSM_CONFIG_KEY_PREFIX: "tiered-storage/"
     volumes:
       - kafka-data:/var/lib/kafka/data
+      - kafka-ts-cache:/var/lib/kafka/tiered-storage-cache
+      - garage-env:/shared:ro
+
+  kafka2:
+    build:
+      context: ./kafka
+      dockerfile: Dockerfile
+    container_name: kafka2
+    ports:
+      - "9094:9094"
+    depends_on:
+      - garage
+    environment:
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093,2@kafka2:9093
+      KAFKA_LISTENERS: PLAINTEXT://:29092,CONTROLLER://:9093,PLAINTEXT_HOST://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka2:29092,PLAINTEXT_HOST://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      CLUSTER_ID: 5L6g3nShT-eMCtK--X86sw
+      # Tiered Storage
+      KAFKA_REMOTE_LOG_STORAGE_SYSTEM_ENABLE: "true"
+      KAFKA_REMOTE_LOG_MANAGER_TASK_INTERVAL_MS: "5000"
+      KAFKA_REMOTE_LOG_METADATA_MANAGER_CLASS_NAME: "org.apache.kafka.server.log.remote.metadata.storage.TopicBasedRemoteLogMetadataManager"
+      KAFKA_REMOTE_LOG_METADATA_MANAGER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_RLMM_CONFIG_REMOTE_LOG_METADATA_TOPIC_REPLICATION_FACTOR: "2"
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_PATH: "/opt/kafka/tiered-storage/core/*:/opt/kafka/tiered-storage/s3/*"
+      KAFKA_REMOTE_LOG_STORAGE_MANAGER_CLASS_NAME: "io.aiven.kafka.tieredstorage.RemoteStorageManager"
+      # S3 backend (Garage)
+      KAFKA_RSM_CONFIG_STORAGE_BACKEND_CLASS: "io.aiven.kafka.tieredstorage.storage.s3.S3Storage"
+      KAFKA_RSM_CONFIG_STORAGE_S3_ENDPOINT_URL: "http://garage:3902"
+      KAFKA_RSM_CONFIG_STORAGE_S3_BUCKET_NAME: "kafka-tiered-storage"
+      KAFKA_RSM_CONFIG_STORAGE_S3_REGION: "garage"
+      KAFKA_RSM_CONFIG_STORAGE_S3_PATH_STYLE_ACCESS_ENABLED: "true"
+      KAFKA_RSM_CONFIG_STORAGE_AWS_CERTIFICATE_CHECK_ENABLED: "false"
+      # Chunking & cache
+      KAFKA_RSM_CONFIG_CHUNK_SIZE: "4194304"
+      KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_CLASS: "io.aiven.kafka.tieredstorage.fetch.cache.DiskChunkCache"
+      KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_PATH: "/var/lib/kafka/tiered-storage-cache"
+      KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_SIZE: "1073741824"
+      KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_PREFETCH_MAX_SIZE: "16777216"
+      KAFKA_RSM_CONFIG_FETCH_CHUNK_CACHE_RETENTION_MS: "600000"
+      KAFKA_RSM_CONFIG_CUSTOM_METADATA_FIELDS_INCLUDE: "REMOTE_SIZE"
+      KAFKA_RSM_CONFIG_KEY_PREFIX: "tiered-storage/"
+    volumes:
+      - kafka2-data:/var/lib/kafka/data
+      - kafka2-ts-cache:/var/lib/kafka/tiered-storage-cache
+      - garage-env:/shared:ro
 
   init-topics:
     image: apache/kafka:3.7.0
     depends_on:
-      - kafka
+      kafka:
+        condition: service_started
+      kafka2:
+        condition: service_started
+      init-garage:
+        condition: service_completed_successfully
     entrypoint: >
       bash -c "
         echo 'Waiting for Kafka...' &&
-        sleep 20 &&
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic whatsapp-msg --partitions 3 --replication-factor 1 &&
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic mail-msg --partitions 3 --replication-factor 1 &&
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic formatted-ticket --partitions 3 --replication-factor 1 &&
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic mail-msg-dlq --partitions 3 --replication-factor 1 &&
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic whatsapp-msg-dlq --partitions 3 --replication-factor 1 &&
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic formatted-ticket-dlq --partitions 3 --replication-factor 1 &&
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic labelized-ticket --partitions 3 --replication-factor 1 &&
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic labelized-ticket-dlq --partitions 3 --replication-factor 1 &&
+        sleep 30 &&
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic whatsapp-msg --partitions 3 --replication-factor 2 --config remote.storage.enable=true --config local.retention.ms=60000 --config retention.ms=604800000 --config segment.ms=60000 &&
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic mail-msg --partitions 3 --replication-factor 2 --config remote.storage.enable=true --config local.retention.ms=60000 --config retention.ms=604800000 --config segment.ms=60000 &&
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic formatted-ticket --partitions 3 --replication-factor 2 --config remote.storage.enable=true --config local.retention.ms=60000 --config retention.ms=604800000 --config segment.ms=60000 &&
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic mail-msg-dlq --partitions 3 --replication-factor 2 &&
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic whatsapp-msg-dlq --partitions 3 --replication-factor 2 &&
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic formatted-ticket-dlq --partitions 3 --replication-factor 2 &&
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic labelized-ticket --partitions 3 --replication-factor 2 --config remote.storage.enable=true --config local.retention.ms=60000 --config retention.ms=604800000 --config segment.ms=60000 &&
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic labelized-ticket-dlq --partitions 3 --replication-factor 2 &&
         echo 'Topics created'
       "
 
@@ -49,9 +134,10 @@ services:
       - "8080:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092,kafka2:29092
     depends_on:
       - kafka
+      - kafka2
 
   postgres:
     image: postgres:16
@@ -66,7 +152,7 @@ services:
       - pg-data:/var/lib/postgresql/data
 
   garage:
-    image: dxflrs/garage:v1.0.1
+    image: dxflrs/garage:v2.0.0
     container_name: garage
     ports:
       - "3900:3900"
@@ -74,6 +160,36 @@ services:
     volumes:
       - garage-data:/var/lib/garage/data
       - garage-meta:/var/lib/garage/meta
+      - ./garage/garage.toml:/etc/garage.toml:ro
+
+  init-garage:
+    build:
+      context: ./garage
+      dockerfile: Dockerfile.init
+    container_name: init-garage
+    depends_on:
+      - garage
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml:ro
+      - garage-meta:/var/lib/garage/meta:ro
+      - garage-env:/shared
+      - ./garage/init-garage.sh:/init-garage.sh:ro
+    entrypoint: ["sh", "/init-garage.sh"]
+
+  garage-webui:
+    image: khairul169/garage-webui:latest
+    container_name: garage-webui
+    restart: unless-stopped
+    depends_on:
+      - garage
+    volumes:
+      - ./garage/garage.toml:/etc/garage.toml:ro
+    ports:
+      - "3909:3909"
+    environment:
+      API_BASE_URL: "http://garage:3900"
+      ADMIN_TOKEN: "s3cr3t4dm1nt0k3n"
+      S3_ENDPOINT_URL: "http://garage:3902"
 
   ollama:
     image: ollama/ollama:latest
@@ -111,8 +227,10 @@ services:
       KAFKA_BROKERS: kafka:29092
       ERROR_RATE: ${ERROR_RATE:-0.1}
     depends_on:
-      - kafka
-      - init-topics
+      kafka:
+        condition: service_started
+      init-topics:
+        condition: service_completed_successfully
 
   whatsapp-consumer:
     profiles: [app]
@@ -130,9 +248,12 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-messages}
       AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
     depends_on:
-      - kafka
-      - postgres
-      - init-topics
+      kafka:
+        condition: service_started
+      postgres:
+        condition: service_started
+      init-topics:
+        condition: service_completed_successfully
 
   mail-consumer:
     profiles: [app]
@@ -150,9 +271,12 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-messages}
       AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
     depends_on:
-      - kafka
-      - postgres
-      - init-topics
+      kafka:
+        condition: service_started
+      postgres:
+        condition: service_started
+      init-topics:
+        condition: service_completed_successfully
 
   formatted-ticket-consumer:
     profiles: [app]
@@ -166,10 +290,14 @@ services:
       OLLAMA_HOST: ${OLLAMA_HOST:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:1b}
     depends_on:
-      - kafka
-      - ollama
-      - init-ollama
-      - init-topics
+      kafka:
+        condition: service_started
+      ollama:
+        condition: service_started
+      init-ollama:
+        condition: service_started
+      init-topics:
+        condition: service_completed_successfully
 
   labelized-ticket-consumer:
     profiles: [app]
@@ -188,9 +316,12 @@ services:
       AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
       DISCORD_WEBHOOK_URL_TICKET: ${DISCORD_WEBHOOK_URL_TICKET}
     depends_on:
-      - kafka
-      - postgres
-      - init-topics
+      kafka:
+        condition: service_started
+      postgres:
+        condition: service_started
+      init-topics:
+        condition: service_completed_successfully
 
   dlq-error-manager:
     profiles: [app]
@@ -209,13 +340,20 @@ services:
       AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
       DISCORD_WEBHOOK_URL_ERROR: ${DISCORD_WEBHOOK_URL_ERROR}
     depends_on:
-      - kafka
-      - postgres
-      - init-topics
+      kafka:
+        condition: service_started
+      postgres:
+        condition: service_started
+      init-topics:
+        condition: service_completed_successfully
 
 volumes:
   kafka-data:
+  kafka2-data:
+  kafka-ts-cache:
+  kafka2-ts-cache:
   pg-data:
   garage-data:
   garage-meta:
+  garage-env:
   ollama-data:

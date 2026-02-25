@@ -23,7 +23,7 @@ export async function getTicketKpis(): Promise<TicketKpi[]> {
 export async function getTicketsOverTime(): Promise<TimeSeriesKpi[]> {
     const pool = getPool();
     const result = await pool.query(
-        `SELECT date_bin('5 seconds', created_at, TIMESTAMP '2020-01-01') as date, COUNT(*) as count 
+        `SELECT date_bin('5 minutes', created_at, TIMESTAMP '2020-01-01') as date, COUNT(*) as count 
          FROM tickets 
          GROUP BY date 
          ORDER BY date ASC`

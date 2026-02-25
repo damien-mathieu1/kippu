@@ -4,7 +4,7 @@ import { saveTicket, updateTicketKpi, findSimilarTicket, incrementTicketOccurren
 
 const kafka = new Kafka({
     clientId: "labelized-ticket-consumer",
-    brokers: [process.env.KAFKA_BROKERS || "localhost:9092"],
+    brokers: (process.env.KAFKA_BROKERS || "localhost:9092").split(","),
 });
 
 const consumer = kafka.consumer({ groupId: "labelized-ticket-consumer-group" });
@@ -29,9 +29,17 @@ async function sendToDlq(
     partition: number,
     offset: string,
 ) {
+    const dlqMessage = {
+        originalMessage: value,
+        error: error,
+        timestamp: new Date().toISOString(),
+        topic: topic,
+        partition: partition,
+        offset: offset
+    };
     await producer.send({
         topic: TOPIC_DLQ,
-        messages: [{ value, headers: { error } }],
+        messages: [{ value: JSON.stringify(dlqMessage) }],
     });
     await consumer.commitOffsets([
         { topic, partition, offset: (Number(offset) + 1).toString() },
@@ -74,7 +82,7 @@ async function sendToDiscord(ticket: LabelizedTicket) {
     });
 
     if (!res.ok) {
-        throw new Error(`Discord ${res.status} ${res.statusText}`);
+        console.error(`Discord ${res.status} ${res.statusText}`);
     }
 }
 
@@ -122,8 +130,12 @@ async function run() {
                     console.log(`[Grouping] Ticket ${ticket.id} is similar to ${similarTicket.id}`);
                     await incrementTicketOccurrences(similarTicket.id);
                 } else {
-                    await sendToDiscord(ticket);
                     await saveTicket(ticket);
+                    try {
+                        await sendToDiscord(ticket);
+                    } catch (err) {
+                        console.error("Failed to send to Discord:", err);
+                    }
                 }
 
                 await updateTicketKpi(ticket.feedbackType);

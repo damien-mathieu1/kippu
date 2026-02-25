@@ -1,0 +1,2 @@
+FROM alpine:3.19
+COPY --from=dxflrs/garage:v2.0.0 /garage /usr/local/bin/garage
