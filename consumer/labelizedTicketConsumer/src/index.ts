@@ -4,7 +4,7 @@ import { saveTicket, updateTicketKpi, findSimilarTicket, incrementTicketOccurren
 
 const kafka = new Kafka({
     clientId: "labelized-ticket-consumer",
-    brokers: [process.env.KAFKA_BROKERS || "localhost:9092"],
+    brokers: (process.env.KAFKA_BROKERS || "localhost:9092").split(","),
 });
 
 const consumer = kafka.consumer({ groupId: "labelized-ticket-consumer-group" });
