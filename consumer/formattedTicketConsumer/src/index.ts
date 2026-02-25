@@ -10,7 +10,7 @@ import { classifyCategory } from "./agents/categorizationAgent";
 
 const kafka = new Kafka({
   clientId: "formatted-ticket-consumer",
-  brokers: ["localhost:9092"],
+  brokers: (process.env.KAFKA_BROKERS || "localhost:9092").split(","),
 });
 
 const consumer = kafka.consumer({ groupId: "formatted-ticket-consumer-group" });
