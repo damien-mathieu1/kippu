@@ -125,7 +125,7 @@ export async function getDLQKpis(): Promise<DLQKpi[]> {
 export async function getDLQErrorsOverTime(): Promise<TimeSeriesKpi[]> {
   const pool = getPool();
   const result = await pool.query(
-    `SELECT date_bin('5 seconds', created_at, TIMESTAMP '2020-01-01') as date, COUNT(*) as count 
+    `SELECT date_bin('5 minutes', created_at, TIMESTAMP '2020-01-01') as date, COUNT(*) as count 
      FROM dlq_errors 
      GROUP BY date 
      ORDER BY date ASC`

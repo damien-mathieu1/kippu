@@ -4,7 +4,7 @@ import { FormattedTicket, FeedbackType } from "@kippu/shared";
 
 const kafka = new Kafka({
   clientId: "mail-consumer",
-  brokers: [process.env.KAFKA_BROKERS || "localhost:9092"],
+  brokers: (process.env.KAFKA_BROKERS || "localhost:9092").split(","),
 });
 
 const consumer = kafka.consumer({ groupId: "mail-consumer-group" });
